@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUNSTONE - Lung Health Monitoring System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .logo-text h1 {
+            color: #764ba2;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .logo-text p {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 10px 25px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Pages */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Dashboard Page */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-title {
+            color: #764ba2;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+
+        .status-widget {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .status-widget h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .status-widget .status-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .device-item {
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Session Page */
+        .session-header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .patient-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            padding: 10px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .sensor-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .sensor-name {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .sensor-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #764ba2;
+        }
+
+        .mini-chart {
+            height: 50px;
+            margin-top: 10px;
+            background: linear-gradient(to top, rgba(102, 126, 234, 0.2), transparent);
+            border-radius: 4px;
+        }
+
+        .result-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .result-category {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 15px 0;
+        }
+
+        .result-confidence {
+            font-size: 24px;
+            opacity: 0.9;
+        }
+
+        /* History Table */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .history-table th {
+            background: #f9fafb;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #764ba2;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .history-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .history-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Admin Monitoring */
+        .log-container {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #10b981;
+            padding-left: 10px;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #764ba2;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .search-box {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            width: 300px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo">S</div>
+                <div class="logo-text">
+                    <h1>SUNSTONE</h1>
+                    <p>Lung Health Monitoring System</p>
+                </div>
+            </div>
+            <div class="nav-tabs">
+                <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+                <button class="nav-btn" onclick="showPage('history')">Riwayat</button>
+                <button class="nav-btn" onclick="showPage('admin')">Admin</button>
+            </div>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard" class="page active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Buat Sesi Baru</h2>
+                    </div>
+                    <form id="sessionForm" onsubmit="createSession(event)">
+                        <div class="form-group">
+                            <label>Nama Pasien</label>
+                            <input type="text" id="patientName" placeholder="Masukkan nama pasien" required>
+                        </div>
+                        <div class="form-group">
+                            <label>No. HP</label>
+                            <input type="tel" id="patientPhone" placeholder="08xxxxxxxxxx" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Device ID</label>
+                            <select id="deviceId" class="form-group input" style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:8px;">
+                                <option value="ESP01">ESP01</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px;">
+                            Mulai Sesi
+                        </button>
+                    </form>
+                </div>
+
+                <div>
+                    <div class="status-widget">
+                        <h3>Status Sistem</h3>
+                        <div class="status-value" id="systemStatus">Ready</div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title" style="margin-bottom:15px;">Device Aktif</h3>
+                        <div class="device-list">
+                            <div class="device-item">
+                                <div>
+                                    <strong>ESP01</strong>
+                                    <p style="font-size:12px; color:#666; margin-top:5px;">IoT Sensor Device</p>
+                                </div>
+                                <div class="device-status"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Monitoring Page -->
+        <div id="session" class="page">
+            <div class="session-header">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2 class="card-title">Monitoring Sesi</h2>
+                    <div>
+                        <button class="btn btn-danger" onclick="finishSession()">Tutup Sesi</button>
+                    </div>
+                </div>
+                <div class="patient-info" id="patientInfo">
+                    <!-- Patient info will be populated here -->
+                </div>
+            </div>
+
+            <div class="sensor-grid" id="sensorGrid">
+                <!-- Sensor cards will be populated here -->
+            </div>
+
+            <div id="resultPanel" style="display:none;">
+                <div class="result-panel">
+                    <h3>Hasil Analisis AI</h3>
+                    <div class="result-category" id="resultCategory">-</div>
+                    <div class="result-confidence" id="resultConfidence">Confidence: -</div>
+                    <p style="margin-top:20px; opacity:0.9;">Model: ONNX Runtime (Browser)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Page -->
+        <div id="history" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Riwayat Pasien</h2>
+                    <button class="btn btn-primary" onclick="showPage('dashboard')">+ Sesi Baru</button>
+                </div>
+                <input type="text" class="search-box" id="searchBox" placeholder="Cari nama pasien..." onkeyup="filterHistory()">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Nama</th>
+                            <th>No HP</th>
+                            <th>Status</th>
+                            <th>Hasil</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding:40px; color:#666;">
+                                <div class="loading" style="margin:0 auto 10px;"></div>
+                                <div>Memuat data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Admin Monitoring Page -->
+        <div id="admin" class="page">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">System Monitoring</h2>
+                    <button class="btn btn-success" onclick="clearLogs()">Clear Logs</button>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">[SYSTEM] Monitoring started...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script>
+        // Configuration
+        const CONFIG = {
+            apiEndpoint: 'https://dd23gtb2nc.execute-api.ap-southeast-1.amazonaws.com',
+            modelUrl: 'https://d1mw90se9yxe88.cloudfront.net/sunstone_model.onnx',
+            modelUrlBackup: 'https://sunstone-model-536697242709.s3.ap-southeast-1.amazonaws.com/sunstone_model.onnx',
+            pollInterval: 2000
+        };
+
+        // Global State
+        let currentSession = null;
+        let pollingInterval = null;
+        let onnxSession = null;
+        let sensorHistory = [];
+
+        // Navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+
+            if (pageId === 'history') loadHistory();
+            if (pageId === 'admin') addLog('[SYSTEM] Admin panel accessed');
+        }
+
+        // Create Session
+        async function createSession(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('patientName').value;
+            const phone = document.getElementById('patientPhone').value;
+            const deviceId = document.getElementById('deviceId').value;
+
+            addLog(`[API] Creating session for ${name}...`);
+
+            try {
+                const response = await fetch(`${CONFIG.apiEndpoint}/session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, device_id: deviceId })
+                });
+
+                const data = await response.json();
+                
+                if (data.id) {
+                    currentSession = { ...data, name, phone, deviceId };
+                    addLog(`[SUCCESS] Session created: ${data.id}`, 'success');
+                    
+                    // Show session page
+                    showPage('session');
+                    displayPatientInfo();
+                    startPolling();
+                    loadModel();
+                } else {
+                    addLog(`[ERROR] Failed to create session: ${JSON.stringify(data)}`, 'error');
+                    alert('Gagal membuat sesi. Cek log admin.');
+                }
+            } catch (error) {
+                addLog(`[ERROR] Network error: ${error.message}`, 'error');
+                alert('Error koneksi ke server');
+            }
+        }
+
+        // Display Patient Info
+        function displayPatientInfo() {
+            const html = `
+                <div class="info-item">
+                    <div class="info-label">Nama Pasien</div>
+                    <div class="info-value">${currentSession.name}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">No. HP</div>
+                    <div class="info-value">${currentSession.phone}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Session ID</div>
+                    <div class="info-value">${currentSession.id}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Device</div>
+                    <div class="info-value">${currentSession.deviceId}</div>
+                </div>
+            `;
+            document.getElementById('patientInfo').innerHTML = html;
+        }
+
+        // Load ONNX Model
+        async function loadModel() {
+            try {
+                addLog('[ML] Loading ONNX model...');
+                onnxSession = await ort.InferenceSession.create(CONFIG.modelUrl);
+                addLog('[ML] Model loaded successfully', 'success');
+            } catch (error) {
+                addLog(`[ML] Failed from CDN, trying backup...`, 'warning');
+                try {
+                    onnxSession = await ort.InferenceSession.create(CONFIG.modelUrlBackup);
+                    addLog('[ML] Model loaded from backup', 'success');
+                } catch (err) {
+                    addLog(`[ERROR] Model load failed: ${err.message}`, 'error');
+                }
+            }
+        }
+
+        // Start Polling
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            
+            pollingInterval = setInterval(async () => {
+                if (!currentSession) return;
+
+                try {
+                    // Get latest sensor data
+                    const response = await fetch(
+                        `${CONFIG.apiEndpoint}/session/${currentSession.id}/sensors?limit=1`
+                    );
+                    const data = await response.json();
+
+                    if (data.sensors && data.sensors.length > 0) {
+                        const latest = data.sensors[0];
+                        updateSensorDisplay(latest.sensors);
+                        sensorHistory.push(latest);
+
+                        // Run inference if model loaded
+                        if (onnxSession && sensorHistory.length >= 3) {
+                            runInference(latest.sensors);
+                        }
+                    }
+                } catch (error) {
+                    addLog(`[ERROR] Polling failed: ${error.message}`, 'error');
+                }
+            }, CONFIG.pollInterval);
+
+            addLog('[SYSTEM] Polling started');
+        }
+
+        // Update Sensor Display
+        function updateSensorDisplay(sensors) {
+            const sensorNames = {
+                raw_mg811: 'CO2 (MG811)',
+                raw_mq7: 'CO (MQ7)',
+                raw_mq3: 'Alkohol (MQ3)',
+                raw_mq135: 'Gas (MQ135)'
+            };
+
+            let html = '';
+            for (const [key, value] of Object.entries(sensors)) {
+                html += `
+                    <div class="sensor-card">
+                        <div class="sensor-name">${sensorNames[key] || key}</div>
+                        <div class="sensor-value">${value}</div>
+                        <div class="mini-chart"></div>
+                    </div>
+                `;
+            }
+            document.getElementById('sensorGrid').innerHTML = html;
+        }
+
+        // Run ML Inference
+        async function runInference(sensors) {
+            try {
+                addLog('[ML] Running inference...');
+
+                // Prepare input tensor [raw_mg811, raw_mq7, raw_mq3, raw_mq135]
+                const inputData = new Float32Array([
+                    sensors.raw_mg811,
+                    sensors.raw_mq7,
+                    sensors.raw_mq3,
+                    sensors.raw_mq135
+                ]);
+
+                const tensor = new ort.Tensor('float32', inputData, [1, 4]);
+                const feeds = { float_input: tensor };
+                
+                const results = await onnxSession.run(feeds);
+                const output = results.output.data;
+
+                // Get prediction
+                const maxIndex = output.indexOf(Math.max(...output));
+                const categories = ['Rendah', 'Sedang', 'Tinggi'];
+                const category = categories[maxIndex];
+                const confidence = (output[maxIndex] * 100).toFixed(2);
+
+                addLog(`[ML] Prediction: ${category} (${confidence}%)`, 'success');
+
+                // Display result
+                document.getElementById('resultCategory').textContent = category;
+                document.getElementById('resultConfidence').textContent = `Confidence: ${confidence}%`;
+                document.getElementById('resultPanel').style.display = 'block';
+
+                // Send result to backend
+                await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/result`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        category,
+                        confidence: parseFloat(confidence),
+                        sensor_values: [sensors.raw_mg811, sensors.raw_mq7, sensors.raw_mq3, sensors.raw_mq135],
+                        timestamp: new Date().toISOString(),
+                        device_id: currentSession.deviceId
+                    })
+                });
+
+                addLog('[API] Result sent to backend', 'success');
+
+            } catch (error) {
+                addLog(`[ERROR] Inference failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Finish Session
+        async function finishSession() {
+            if (!currentSession) return;
+            
+            if (!confirm('Tutup sesi ini?')) return;
+
+            try {
+                addLog('[API] Closing session...');
+                
+                await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/finish`, {
+                    method: 'POST'
+                });
+
+                addLog('[SUCCESS] Session closed', 'success');
+                
+                clearInterval(pollingInterval);
+                currentSession = null;
+                sensorHistory = [];
+                
+                showPage('dashboard');
+                document.getElementById('sessionForm').reset();
+                
+            } catch (error) {
+                addLog(`[ERROR] Failed to close session: ${error.message}`, 'error');
+            }
+        }
+
+        // Load History
+        async function loadHistory() {
+            try {
+                const response = await fetch(`${CONFIG.apiEndpoint}/history`);
+                const data = await response.json();
+
+                const tbody = document.getElementById('historyTable');
+                
+                if (data.history && data.history.length > 0) {
+                    tbody.innerHTML = data.history.map(h => `
+                        <tr>
+                            <td>${new Date(h.sessionStart || Date.now()).toLocaleString('id-ID')}</td>
+                            <td>${h.name}</td>
+                            <td>${h.phone}</td>
+                            <td>
+                                <span class="badge ${h.status === 'OPEN' ? 'badge-info' : 'badge-success'}">
+                                    ${h.status}
+                                </span>
+                            </td>
+                            <td>
+                                ${h.lastResultCategory ? 
+                                    `<span class="badge badge-${getBadgeClass(h.lastResultCategory)}">
+                                        ${h.lastResultCategory}
+                                    </span>` : '-'}
+                            </td>
+                            <td>
+                                ${h.status === 'OPEN' ? 
+                                    `<button class="btn btn-danger btn-sm" onclick="closeSessionFromHistory('${h.id}')">Tutup</button>` :
+                                    `<button class="btn btn-success btn-sm" onclick="viewDetails('${h.id}')">Detail</button>`
+                                }
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:#666;">Belum ada data</td></tr>';
+                }
+
+                addLog(`[API] Loaded ${data.history?.length || 0} history records`);
+            } catch (error) {
+                addLog(`[ERROR] Failed to load history: ${error.message}`, 'error');
+            }
+        }
+
+        function getBadgeClass(category) {
+            if (category === 'Tinggi') return 'danger';
+            if (category === 'Sedang') return 'warning';
+            return 'success';
+        }
+
+        async function closeSessionFromHistory(sessionId) {
+            if (!confirm('Tutup sesi ini?')) return;
+
+            try {
+                await fetch(`${CONFIG.apiEndpoint}/session/${sessionId}/finish`, {
+                    method: 'POST'
+                });
+                addLog(`[API] Session ${sessionId} closed from history`, 'success');
+                loadHistory();
+            } catch (error) {
+                addLog(`[ERROR] Failed to close: ${error.message}`, 'error');
+            }
+        }
+
+        function viewDetails(sessionId) {
+            alert(`Detail untuk session: ${sessionId}\n\nFitur ini akan menampilkan grafik lengkap dan laporan PDF.`);
+        }
+
+        function filterHistory() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const rows = document.querySelectorAll('#historyTable tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+        }
+
+        // Admin Logs
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logClass = type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
+            
+            const log = document.createElement('div');
+            log.className = `log-entry ${logClass}`;
+            log.textContent = `[${timestamp}] ${message}`;
+            
+            const container = document.getElementById('logContainer');
+            container.appendChild(log);
+            container.scrollTop = container.scrollHeight;
+
+            // Update system status
+            if (type === 'error') {
+                document.getElementById('systemStatus').textContent = 'Error';
+                document.getElementById('systemStatus').style.background = '#ef4444';
+            } else if (type === 'success') {
+                document.getElementById('systemStatus').textContent = 'Active';
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '<div class="log-entry">[SYSTEM] Logs cleared</div>';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('[SYSTEM] SUNSTONE Dashboard initialized');
+            addLog(`[CONFIG] API Endpoint: ${CONFIG.apiEndpoint}`);
+            addLog(`[CONFIG] Model URL: ${CONFIG.modelUrl}`);
+            addLog('[SYSTEM] Ready to start session');
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', (e) => {
+            if (currentSession) {
+                e.preventDefault();
+                e.returnValue = 'Sesi masih aktif. Yakin ingin keluar?';
+            }
+        });
+    </script>
+</body>
+</html>
