@@ -1,899 +1,342 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SUNSTONE - Lung Health Monitoring System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: white;
-            padding: 20px 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 20px;
-        }
-
-        .logo-text h1 {
-            color: #764ba2;
-            font-size: 24px;
-            font-weight: 700;
-        }
-
-        .logo-text p {
-            color: #666;
-            font-size: 12px;
-        }
-
-        .nav-tabs {
-            display: flex;
-            gap: 10px;
-        }
-
-        .nav-btn {
-            padding: 10px 25px;
-            background: #f0f0f0;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #666;
-            transition: all 0.3s;
-        }
-
-        .nav-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .nav-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .card-title {
-            color: #764ba2;
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-success {
-            background: #10b981;
-            color: white;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-            background: white;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #764ba2;
-        }
-
-        .status-widget {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-
-        .status-widget h3 {
-            font-size: 16px;
-            margin-bottom: 10px;
-            opacity: 0.9;
-        }
-
-        .status-widget .status-value {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .device-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .device-item {
-            padding: 15px;
-            background: #f9fafb;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .device-status {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #10b981;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .session-header {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .patient-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .info-item {
-            padding: 10px;
-            background: #f9fafb;
-            border-radius: 8px;
-        }
-
-        .info-label {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .info-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .sensor-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .sensor-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .sensor-name {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .sensor-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: #764ba2;
-        }
-
-        .mini-chart {
-            height: 50px;
-            margin-top: 10px;
-            background: linear-gradient(to top, rgba(102, 126, 234, 0.2), transparent);
-            border-radius: 4px;
-        }
-
-        .result-panel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .result-category {
-            font-size: 48px;
-            font-weight: 700;
-            margin: 15px 0;
-        }
-
-        .result-confidence {
-            font-size: 24px;
-            opacity: 0.9;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .history-table th {
-            background: #f9fafb;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-            color: #764ba2;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .history-table td {
-            padding: 15px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .history-table tr:hover {
-            background: #f9fafb;
-        }
-
-        .badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .badge-info {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .log-container {
-            background: #1f2937;
-            color: #10b981;
-            padding: 20px;
-            border-radius: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-left: 3px solid #10b981;
-            padding-left: 10px;
-        }
-
-        .log-entry.error {
-            border-left-color: #ef4444;
-            color: #ef4444;
-        }
-
-        .log-entry.warning {
-            border-left-color: #f59e0b;
-            color: #f59e0b;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #764ba2;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .search-box {
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            width: 300px;
-            margin-bottom: 20px;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-
-        .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 2px solid #10b981;
-        }
-
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 2px solid #ef4444;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .sensor-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .nav-tabs {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .nav-btn {
-                flex: 1;
-                padding: 10px 15px;
-                font-size: 13px;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PKM - Dashboard</title>
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb;
+      --accent:#22c55e; --accent2:#3b82f6; --warn:#f59e0b; --danger:#ef4444;
+      --card:#0b1220; --br:14px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1c 60%,#09101a);
+      color:var(--text);font:500 14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .logo{width:38px;height:38px;border-radius:10px;
+      background:radial-gradient(120% 120% at 0% 0%,#53c3ff,transparent 60%),
+                 radial-gradient(120% 120% at 100% 100%,#22c55e,transparent 60%),#0b1424}
+    .title{font-weight:700;font-size:18px;}
+    .muted{color:var(--muted)}
+    .grid{display:grid;gap:14px;grid-template-columns: repeat(12,1fr)}
+    .card{grid-column: span 12;background:linear-gradient(180deg,#0c1426,#0b1120);
+      border:1px solid #132036;border-radius:var(--br); padding:16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03)}
+    @media(min-width:900px){
+      .c4{grid-column: span 4}.c6{grid-column: span 6}.c8{grid-column: span 8}.c12{grid-column: span 12}
+    }
+    .card h3{margin:0 0 10px;font-size:15px}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+    input,select,button,textarea{
+      font:inherit;color:inherit; background:#0a1426; border:1px solid #1a2940; border-radius:10px;
+      padding:10px 12px; outline:none; width:100%;
+    }
+    input:focus,textarea:focus,select:focus{border-color:#2f69ff; box-shadow: 0 0 0 3px rgba(59,130,246,.25)}
+    button{cursor:pointer; width:auto; background:linear-gradient(180deg,#1e3a8a,#1f2b57);
+      border:1px solid #2b4b9a; padding:10px 14px}
+    button.primary{background:linear-gradient(180deg,#16a34a,#0f7a39); border-color:#1b9a50}
+    button.ghost{background:transparent;border-color:#2a3b56}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .row > *{flex:1}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;
+      background:#0a1324;border:1px solid #12213a;font-size:12px}
+    pre{background:#070d18;border:1px solid #12213a;border-radius:12px;padding:12px;overflow:auto;max-height:320px}
+    .ok{color:var(--accent)} .bad{color:var(--danger)} .warn{color:var(--warn)}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{background:#0a1324;border:1px solid #12213a;border-radius:12px;padding:10px 12px}
+    .k{color:#7dd3fc} .v{color:#bbf7d0}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo-section">
-                <div class="logo">S</div>
-                <div class="logo-text">
-                    <h1>SUNSTONE</h1>
-                    <p>Lung Health Monitoring System</p>
-                </div>
-            </div>
-            <div class="nav-tabs">
-                <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
-                <button class="nav-btn" onclick="showPage('history')">Riwayat</button>
-                <button class="nav-btn" onclick="showPage('admin')">Admin</button>
-            </div>
-        </div>
-
-        <!-- Dashboard Page -->
-        <div id="dashboard" class="page active">
-            <div class="dashboard-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">Buat Sesi Baru</h2>
-                    </div>
-                    <div id="sessionAlert"></div>
-                    <form id="sessionForm" onsubmit="createSession(event)">
-                        <div class="form-group">
-                            <label>Nama Pasien</label>
-                            <input type="text" id="patientName" placeholder="Masukkan nama pasien" required>
-                        </div>
-                        <div class="form-group">
-                            <label>No. HP</label>
-                            <input type="tel" id="patientPhone" placeholder="08xxxxxxxxxx" pattern="[0-9]{10,13}" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Device ID</label>
-                            <select id="deviceId" required>
-                                <option value="ESP01">ESP01 - IoT Sensor Device</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary" id="startSessionBtn" style="width:100%; margin-top:10px;">
-                            Mulai Sesi
-                        </button>
-                    </form>
-                </div>
-
-                <div>
-                    <div class="status-widget">
-                        <h3>Status Sistem</h3>
-                        <div class="status-value" id="systemStatus">Ready</div>
-                    </div>
-
-                    <div class="card">
-                        <h3 class="card-title" style="margin-bottom:15px;">Device Aktif</h3>
-                        <div class="device-list">
-                            <div class="device-item">
-                                <div>
-                                    <strong>ESP01</strong>
-                                    <p style="font-size:12px; color:#666; margin-top:5px;">IoT Sensor Device</p>
-                                </div>
-                                <div class="device-status"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Session Monitoring Page -->
-        <div id="session" class="page">
-            <div class="session-header">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <h2 class="card-title">Monitoring Sesi</h2>
-                    <button class="btn btn-danger" onclick="finishSession()">Tutup Sesi</button>
-                </div>
-                <div class="patient-info" id="patientInfo"></div>
-            </div>
-
-            <div class="sensor-grid" id="sensorGrid">
-                <div class="sensor-card">
-                    <div class="sensor-name">Menunggu data sensor...</div>
-                    <div class="sensor-value">-</div>
-                </div>
-            </div>
-
-            <div id="resultPanel" style="display:none;">
-                <div class="result-panel">
-                    <h3>Hasil Analisis AI</h3>
-                    <div class="result-category" id="resultCategory">-</div>
-                    <div class="result-confidence" id="resultConfidence">Confidence: -</div>
-                    <p style="margin-top:20px; opacity:0.9;">Model: ONNX Runtime (Browser)</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- History Page -->
-        <div id="history" class="page">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Riwayat Pasien</h2>
-                    <button class="btn btn-primary" onclick="showPage('dashboard')">+ Sesi Baru</button>
-                </div>
-                <input type="text" class="search-box" id="searchBox" placeholder="Cari nama pasien..." onkeyup="filterHistory()">
-                <table class="history-table">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Nama</th>
-                            <th>No HP</th>
-                            <th>Status</th>
-                            <th>Hasil</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTable">
-                        <tr>
-                            <td colspan="6" style="text-align:center; padding:40px; color:#666;">
-                                <div class="loading" style="margin:0 auto 10px;"></div>
-                                <div>Memuat data...</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Admin Monitoring Page -->
-        <div id="admin" class="page">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">System Monitoring</h2>
-                    <button class="btn btn-success" onclick="clearLogs()">Clear Logs</button>
-                </div>
-                <div class="log-container" id="logContainer">
-                    <div class="log-entry">[SYSTEM] Monitoring started...</div>
-                </div>
-            </div>
-        </div>
+  <div class="wrap">
+    <div class="header">
+      <div class="logo"></div>
+      <div>
+        <div class="title">PKM Dashboard</div>
+        <div class="muted">Flow: buka sesi → ESP kirim sensor → simpan hasil → tutup sesi</div>
+      </div>
+      <span class="pill" id="conn-pill">Status: <b class="bad">Belum dicek</b></span>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-    <script>
-        const CONFIG = {
-            apiEndpoint: 'https://dd23gtb2nc.execute-api.ap-southeast-1.amazonaws.com',
-            modelUrl: 'https://d1mw90se9yxe88.cloudfront.net/sunstone_model.onnx',
-            modelUrlBackup: 'https://sunstone-model-536697242709.s3.ap-southeast-1.amazonaws.com/sunstone_model.onnx',
-            pollInterval: 2000
-        };
+    <div class="grid">
+      <!-- KONFIG -->
+      <div class="card c12">
+        <h3>Konfigurasi</h3>
+        <div class="row">
+          <div><label>API URL</label><input id="api-url" /></div>
+          <div><label>API Key</label><input id="api-key" /></div>
+          <div><label>Device ID</label><input id="device-id" /></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="ghost" id="btn-apply">Terapkan</button>
+          <button id="btn-test">Test Koneksi</button>
+        </div>
+        <div class="hint">Tombol “Test Koneksi” akan GET <code>/history</code>. Kalau OK akan tampil daftar pasien.</div>
+        <pre id="test-output" hidden></pre>
+      </div>
 
-        let currentSession = null;
-        let pollingInterval = null;
-        let onnxSession = null;
-        let sensorHistory = [];
-        let lastInferenceTime = 0;
+      <!-- SESI -->
+      <div class="card c6">
+        <h3>1) Buka Sesi</h3>
+        <div class="row">
+          <div><label>Nama</label><input id="name" placeholder="mis. Ali" /></div>
+          <div><label>No. HP</label><input id="phone" placeholder="mis. 08123456" /></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="btn-open">Buka Sesi</button>
+          <button class="ghost" id="btn-history">Lihat History</button>
+        </div>
+        <pre id="open-output" hidden></pre>
+        <div class="hint">Setelah buka sesi, Device ID akan dipetakan → data sensor dari ESP masuk ke sesi ini.</div>
+      </div>
 
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            
-            document.getElementById(pageId).classList.add('active');
-            
-            const buttons = document.querySelectorAll('.nav-btn');
-            if (pageId === 'dashboard') buttons[0].classList.add('active');
-            else if (pageId === 'history') buttons[1].classList.add('active');
-            else if (pageId === 'admin') buttons[2].classList.add('active');
+      <div class="card c6">
+        <h3>2) Sensor & Hasil</h3>
+        <div class="row">
+          <div><label>ID Sesi (patient_id)</label><input id="pid" placeholder="mis. Ali_08123456" /></div>
+          <div><label>Limit Items</label><input id="limit" type="number" value="5" /></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="btn-sensors">Ambil Sensor</button>
+          <button id="btn-latest" class="ghost">Ambil Latest Result</button>
+        </div>
 
-            if (pageId === 'history') loadHistory();
-            if (pageId === 'admin') addLog('[SYSTEM] Admin panel accessed');
-        }
+        <div style="margin-top:10px;border-top:1px dashed #20304a;padding-top:10px">
+          <div class="row">
+            <div><label>Kategori</label><input id="res-cat" placeholder="Normal / Tinggi" /></div>
+            <div><label>Confidence</label><input id="res-conf" type="number" step="0.01" value="0.80" /></div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="primary" id="btn-save-result">Simpan Result</button>
+          </div>
+        </div>
 
-        async function createSession(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('patientName').value.trim();
-            const phone = document.getElementById('patientPhone').value.trim();
-            const deviceId = document.getElementById('deviceId').value;
+        <pre id="sensor-output" hidden></pre>
+      </div>
 
-            const btn = document.getElementById('startSessionBtn');
-            btn.disabled = true;
-            btn.textContent = 'Membuat Sesi...';
+      <!-- TUTUP SESI -->
+      <div class="card c6">
+        <h3>3) Tutup Sesi</h3>
+        <div class="row">
+          <div><label>ID Sesi (patient_id)</label><input id="pid-finish" placeholder="mis. Ali_08123456" /></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="warn" id="btn-finish">Tutup Sesi</button>
+        </div>
+        <pre id="finish-output" hidden></pre>
+      </div>
 
-            addLog(`[API] Creating session for ${name}...`);
+      <!-- HISTORY -->
+      <div class="card c6">
+        <h3>History Pasien</h3>
+        <div id="history-list" class="list"></div>
+      </div>
+    </div>
+  </div>
 
-            try {
-                const response = await fetch(`${CONFIG.apiEndpoint}/session`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ name, phone, device_id: deviceId })
-                });
+  <script>
+    // === KONFIGURASI API (sudah diisi sesuai env kamu) ===
+    const DEFAULTS = {
+      url: "https://8308ialq3d.execute-api.ap-southeast-1.amazonaws.com/tros-20251007091134-4239",
+      key: "75179e4b24c0179f1806d2a18707e7cb",
+      deviceId: "ESP01",
+    };
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+    // Simpan/ambil dari localStorage supaya nggak ngetik ulang
+    const cfg = {
+      get url(){ return localStorage.getItem("api_url") || DEFAULTS.url; },
+      set url(v){ localStorage.setItem("api_url", v); },
+      get key(){ return localStorage.getItem("api_key") || DEFAULTS.key; },
+      set key(v){ localStorage.setItem("api_key", v); },
+      get deviceId(){ return localStorage.getItem("api_device") || DEFAULTS.deviceId; },
+      set deviceId(v){ localStorage.setItem("api_device", v); },
+    };
 
-                const data = await response.json();
-                
-                if (data.id) {
-                    currentSession = { 
-                        id: data.id,
-                        name: name,
-                        phone: phone,
-                        deviceId: deviceId,
-                        status: data.status || 'OPEN'
-                    };
-                    
-                    addLog(`[SUCCESS] Session created: ${data.id}`, 'success');
-                    
-                    document.getElementById('sessionAlert').innerHTML = `
-                        <div class="alert alert-success">
-                            ✓ Sesi berhasil dibuat! Session ID: ${data.id}
-                        </div>
-                    `;
-                    
-                    setTimeout(() => {
-                        showPage('session');
-                        displayPatientInfo();
-                        startPolling();
-                        loadModel();
-                        document.getElementById('sessionForm').reset();
-                        document.getElementById('sessionAlert').innerHTML = '';
-                    }, 1500);
-                    
-                } else {
-                    throw new Error('No session ID returned');
-                }
-            } catch (error) {
-                addLog(`[ERROR] Failed to create session: ${error.message}`, 'error');
-                document.getElementById('sessionAlert').innerHTML = `
-                    <div class="alert alert-error">
-                        ✗ Gagal membuat sesi: ${error.message}
-                    </div>
-                `;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Mulai Sesi';
-            }
-        }
+    // Helper kecil
+    const $ = (id) => document.getElementById(id);
+    const show = (el, ok=true) => { el.hidden = !ok; };
+    const j = (x) => JSON.stringify(x, null, 2);
 
-        function displayPatientInfo() {
-            const html = `
-                <div class="info-item">
-                    <div class="info-label">Nama Pasien</div>
-                    <div class="info-value">${currentSession.name}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">No. HP</div>
-                    <div class="info-value">${currentSession.phone}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Session ID</div>
-                    <div class="info-value">${currentSession.id}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Device</div>
-                    <div class="info-value">${currentSession.deviceId}</div>
-                </div>
-            `;
-            document.getElementById('patientInfo').innerHTML = html;
-        }
+    function applyConfigToInputs(){
+      $("api-url").value = cfg.url;
+      $("api-key").value = cfg.key;
+      $("device-id").value = cfg.deviceId;
+    }
 
-        async function loadModel() {
-            try {
-                addLog('[ML] Loading ONNX model...');
-                onnxSession = await ort.InferenceSession.create(CONFIG.modelUrl);
-                addLog('[ML] Model loaded successfully from CDN', 'success');
-            } catch (error) {
-                addLog(`[ML] CDN failed, trying backup S3...`, 'warning');
-                try {
-                    onnxSession = await ort.InferenceSession.create(CONFIG.modelUrlBackup);
-                    addLog('[ML] Model loaded from S3 backup', 'success');
-                } catch (err) {
-                    addLog(`[ERROR] Model load failed: ${err.message}`, 'error');
-                }
-            }
-        }
+    function updateStatus(ok, msgOk="Terhubung", msgBad="Gagal"){
+      const pill = $("conn-pill");
+      pill.innerHTML = `Status: <b class="${ok?'ok':'bad'}">${ok?msgOk:msgBad}</b>`;
+    }
 
-        function startPolling() {
-            if (pollingInterval) clearInterval(pollingInterval);
-            
-            pollingInterval = setInterval(async () => {
-                if (!currentSession) return;
+    async function apiFetch(path, options={}){
+      const url = cfg.url.replace(/\/+$/,'') + path;
+      const headers = Object.assign(
+        { "x-api-key": cfg.key },
+        (options.headers || {})
+      );
+      const res = await fetch(url, { ...options, headers });
+      if(!res.ok){
+        const txt = await res.text().catch(()=> "");
+        throw new Error(`HTTP ${res.status}: ${txt || res.statusText}`);
+      }
+      const ct = res.headers.get("content-type") || "";
+      return ct.includes("application/json") ? res.json() : res.text();
+    }
 
-                try {
-                    const response = await fetch(
-                        `${CONFIG.apiEndpoint}/session/${currentSession.id}/sensors?limit=1`,
-                        { headers: { 'Accept': 'application/json' } }
-                    );
-                    
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
-                    const data = await response.json();
+    // ====== Actions ======
+    async function testConnection(){
+      const out = $("test-output");
+      try{
+        const data = await apiFetch("/history");
+        out.textContent = j(data);
+        show(out,true);
+        updateStatus(true, "OK");
+        renderHistory(data.patients||[]);
+      }catch(err){
+        out.textContent = String(err);
+        show(out,true);
+        updateStatus(false, "Gagal");
+      }
+    }
 
-                    if (data.sensors && data.sensors.length > 0) {
-                        const latest = data.sensors[0];
-                        updateSensorDisplay(latest.sensors);
-                        sensorHistory.push(latest);
+    async function openSession(){
+      const name = $("name").value.trim();
+      const phone = $("phone").value.trim();
+      const device_id = cfg.deviceId = $("device-id").value.trim() || DEFAULTS.deviceId;
+      $("api-url").value && (cfg.url = $("api-url").value.trim());
+      $("api-key").value && (cfg.key = $("api-key").value.trim());
 
-                        if (onnxSession && Date.now() - lastInferenceTime > 5000) {
-                            runInference(latest.sensors);
-                        }
-                    }
-                } catch (error) {
-                    addLog(`[ERROR] Polling failed: ${error.message}`, 'error');
-                }
-            }, CONFIG.pollInterval);
+      const out = $("open-output");
+      try{
+        const body = { name, phone, device_id };
+        const data = await apiFetch("/session", {
+          method:"POST",
+          headers:{ "content-type":"application/json" },
+          body: JSON.stringify(body)
+        });
+        out.textContent = j(data);
+        show(out,true);
+        $("pid").value = `${name}_${phone}`;
+        $("pid-finish").value = `${name}_${phone}`;
+        await testConnection(); // refresh history
+      }catch(err){
+        out.textContent = String(err);
+        show(out,true);
+      }
+    }
 
-            addLog('[SYSTEM] Polling started - waiting for sensor data...');
-        }
+    async function getSensors(){
+      const pid = $("pid").value.trim();
+      const limit = Math.max(1, parseInt($("limit").value||"5",10));
+      const out = $("sensor-output");
+      try{
+        const data = await apiFetch(`/session/${encodeURIComponent(pid)}/sensors?limit=${limit}`);
+        out.textContent = j(data);
+        show(out,true);
+      }catch(err){
+        out.textContent = String(err);
+        show(out,true);
+      }
+    }
 
-        function updateSensorDisplay(sensors) {
-            const sensorNames = {
-                raw_mg811: 'CO2 (MG811)',
-                raw_mq7: 'CO (MQ7)',
-                raw_mq3: 'Alkohol (MQ3)',
-                raw_mq135: 'Gas (MQ135)'
-            };
+    async function getLatest(){
+      const pid = $("pid").value.trim();
+      const out = $("sensor-output");
+      try{
+        const data = await apiFetch(`/session/${encodeURIComponent(pid)}/latest`);
+        out.textContent = j(data);
+        show(out,true);
+      }catch(err){
+        out.textContent = String(err);
+        show(out,true);
+      }
+    }
 
-            let html = '';
-            for (const [key, value] of Object.entries(sensors)) {
-                html += `
-                    <div class="sensor-card">
-                        <div class="sensor-name">${sensorNames[key] || key}</div>
-                        <div class="sensor-value">${Math.round(value)}</div>
-                        <div class="mini-chart"></div>
-                    </div>
-                `;
-            }
-            document.getElementById('sensorGrid').innerHTML = html;
-        }
+    async function saveResult(){
+      const pid = $("pid").value.trim();
+      const category = $("res-cat").value.trim() || "Normal";
+      const confidence = parseFloat($("res-conf").value || "0.8");
+      const body = { category, confidence, device_id: cfg.deviceId };
+      const out = $("sensor-output");
+      try{
+        const data = await apiFetch(`/session/${encodeURIComponent(pid)}/result`, {
+          method:"POST",
+          headers:{ "content-type":"application/json" },
+          body: JSON.stringify(body)
+        });
+        out.textContent = j({saved:data, hint:"Pakai tombol 'Ambil Latest Result' untuk melihatnya"});
+        show(out,true);
+      }catch(err){
+        out.textContent = String(err);
+        show(out,true);
+      }
+    }
 
-        async function runInference(sensors) {
-            try {
-                lastInferenceTime = Date.now();
-                addLog('[ML] Running inference...');
+    async function finishSession(){
+      const pid = $("pid-finish").value.trim();
+      const out = $("finish-output");
+      try{
+        const data = await apiFetch(`/session/${encodeURIComponent(pid)}/finish`, { method:"POST" });
+        out.textContent = j(data);
+        show(out,true);
+        await testConnection(); // refresh history
+      }catch(err){
+        out.textContent = String(err);
+        show(out,true);
+      }
+    }
 
-                const inputData = new Float32Array([
-                    sensors.raw_mg811 || 0,
-                    sensors.raw_mq7 || 0,
-                    sensors.raw_mq3 || 0,
-                    sensors.raw_mq135 || 0
-                ]);
+    function renderHistory(items){
+      const host = $("history-list");
+      host.innerHTML = "";
+      (items||[]).forEach(it=>{
+        const div = document.createElement("div");
+        div.className = "item";
+        div.innerHTML = `
+          <div><span class="k">id</span>: <span class="v">${it.id}</span></div>
+          <div><span class="k">status</span>: <span class="v">${it.status||'-'}</span></div>
+          <div><span class="k">start</span>: <span class="v">${it.sessionStart||'-'}</span></div>
+          <div><span class="k">last</span>: <span class="v">${it.lastResultTimestamp||'-'}</span></div>
+          <div><span class="k">category</span>: <span class="v">${it.lastResultCategory||'-'}</span></div>
+          <div><span class="k">device</span>: <span class="v">${it.device_id||'-'}</span></div>
+        `;
+        host.appendChild(div);
+      });
+      if(!items || !items.length){
+        host.innerHTML = `<div class="muted">Belum ada data.</div>`;
+      }
+    }
 
-                const tensor = new ort.Tensor('float32', inputData, [1, 4]);
-                const feeds = { float_input: tensor };
-                
-                const results = await onnxSession.run(feeds);
-                const output = results.output.data;
+    async function loadHistory(){
+      try{
+        const data = await apiFetch("/history");
+        renderHistory(data.patients||[]);
+        updateStatus(true, "OK");
+      }catch{ /* diam */ }
+    }
 
-                const maxIndex = output.indexOf(Math.max(...output));
-                const categories = ['Rendah', 'Sedang', 'Tinggi'];
-                const category = categories[maxIndex];
-                const confidence = (output[maxIndex] * 100).toFixed(2);
+    // ====== wire events ======
+    window.addEventListener("DOMContentLoaded", ()=>{
+      applyConfigToInputs();
+      $("btn-apply").addEventListener("click", ()=>{
+        cfg.url = $("api-url").value.trim();
+        cfg.key = $("api-key").value.trim();
+        cfg.deviceId = $("device-id").value.trim();
+      });
+      $("btn-test").addEventListener("click", testConnection);
+      $("btn-open").addEventListener("click", openSession);
+      $("btn-history").addEventListener("click", loadHistory);
+      $("btn-sensors").addEventListener("click", getSensors);
+      $("btn-latest").addEventListener("click", getLatest);
+      $("btn-save-result").addEventListener("click", saveResult);
+      $("btn-finish").addEventListener("click", finishSession);
 
-                addLog(`[ML] Prediction: ${category} (${confidence}%)`, 'success');
-
-                document.getElementById('resultCategory').textContent = category;
-                document.getElementById('resultConfidence').textContent = `Confidence: ${confidence}%`;
-                document.getElementById('resultPanel').style.display = 'block';
-
-                await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/result`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        category,
-                        confidence: parseFloat(confidence),
-                        sensor_values: [
-                            sensors.raw_mg811 || 0, 
-                            sensors.raw_mq7 || 0, 
-                            sensors.raw_mq3 || 0, 
-                            sensors.raw_mq135 || 0
-                        ],
-                        timestamp: new Date().toISOString(),
-                        device_id: currentSession.deviceId,
-                        modelVersion: 'onnx-v1'
-                    })
-                });
-
-                addLog('[API] Result saved to backend', 'success');
-
-            } catch (error) {
-                addLog(`[ERROR] Inference failed: ${error.message}`, 'error');
-            }
-        }
-
-        async function finishSession() {
-            if (!currentSession) return;
-            
-            if (!confirm('Tutup sesi ini? Sesi tidak dapat dibuka kembali setelah ditutup.')) return;
-
-            try {
-                addLog('[API] Closing session...');
-                
-                const response = await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/finish`, {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' }
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                addLog('[SUCCESS] Session closed successfully', 'success');
-                
-                clearInterval(pollingInterval);
-                currentSession = null;
-                sensorHistory = [];
-                lastInferenceTime = 0;
-                
-                alert('Sesi berhasil ditutup!');
-                showPage('dashboard');
-                
-            } catch (error) {
-                addLog(`[ERROR] Failed to close session: ${error.message}`, 'error');
-                alert('Gagal menutup sesi. Coba lagi.');
-            }
-        }
-
-        async function loadHistory() {
-            try {
-                const response = await fetch(`${CONFIG.apiEndpoint}/history`, {
-                    headers: { 'Accept': 'application/json' }
+      // coba ping awal (silent)
+      loadHistory();
+    });
+  </script>
+</body>
+</html>
