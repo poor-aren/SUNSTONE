@@ -208,9 +208,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
 <script>
-/* ========================================================================
-   KONFIGURASI AWS - FIXED ✅
-   ======================================================================== */
 const CONFIG = {
   cognito: {
     userPoolId: 'ap-southeast-1_fxhxbfLEe',
@@ -222,40 +219,21 @@ const CONFIG = {
   }
 };
 
-/* ========================================================================
-   STATE MANAGEMENT
-   ======================================================================== */
 let currentSession = null;
 let pollingInterval = null;
 let authToken = null;
 
-/* ========================================================================
-   COGNITO LOGIN - FIXED ✅
-   ======================================================================== */
-const poolData = {
-  UserPoolId: CONFIG.cognito.userPoolId,
-  ClientId: CONFIG.cognito.clientId
-};
+const poolData = {UserPoolId: CONFIG.cognito.userPoolId, ClientId: CONFIG.cognito.clientId};
 const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
 
 document.getElementById('loginForm').addEventListener('submit', function(e) {
   e.preventDefault();
   const username = document.getElementById('username').value;
   const password = document.getElementById('password').value;
-  
-  const authData = {
-    Username: username,
-    Password: password
-  };
-  
+  const authData = {Username: username, Password: password};
   const authDetails = new AmazonCognitoIdentity.AuthenticationDetails(authData);
-  const userData = {
-    Username: username,
-    Pool: userPool
-  };
-  
+  const userData = {Username: username, Pool: userPool};
   const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
-  
   cognitoUser.authenticateUser(authDetails, {
     onSuccess: function(result) {
       authToken = result.getIdToken().getJwtToken();
@@ -273,85 +251,49 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 
 function logout() {
   const cognitoUser = userPool.getCurrentUser();
-  if (cognitoUser) {
-    cognitoUser.signOut();
-  }
+  if (cognitoUser) cognitoUser.signOut();
   authToken = null;
   currentSession = null;
   stopPolling();
-  
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('loginPage').classList.add('active');
   addLog('Logout berhasil');
 }
 
-/* ========================================================================
-   NAVIGATION
-   ======================================================================== */
-function showDashboard(e) {
-  switchPage('dashboardPage', e);
-}
-
-function showHistory(e) {
-  switchPage('historyPage', e);
-  loadHistory();
-}
-
-function showAdmin(e) {
-  switchPage('adminPage', e);
-  refreshAWSStatus();
-}
+function showDashboard(e) {switchPage('dashboardPage', e);}
+function showHistory(e) {switchPage('historyPage', e); loadHistory();}
+function showAdmin(e) {switchPage('adminPage', e); refreshAWSStatus();}
 
 function switchPage(pageId, event) {
   if (event) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
   }
-  
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
 }
 
-/* ========================================================================
-   SESSION MANAGEMENT
-   ======================================================================== */
 document.getElementById('patientForm').addEventListener('submit', async function(e) {
   e.preventDefault();
-  
   const name = document.getElementById('patientName').value;
   const age = document.getElementById('patientAge').value;
   const phone = document.getElementById('patientPhone').value;
   const brinkman = document.getElementById('brinkmanIndex').value;
-  
   try {
     const response = await fetch(`${CONFIG.api.url}/session`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authToken
-      },
-      body: JSON.stringify({
-        name: name,
-        age: parseInt(age),
-        phone: phone,
-        brinkman: brinkman,
-        device_id: 'ESP01'
-      })
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, age: parseInt(age), phone, brinkman, device_id: 'ESP01'})
     });
-    
     const data = await response.json();
-    
     if (response.ok) {
       currentSession = data.id;
-      
       document.getElementById('currentName').textContent = name;
       document.getElementById('currentAge').textContent = age;
       document.getElementById('currentPhone').textContent = phone;
-      
       document.getElementById('addPatientSection').style.display = 'none';
       document.getElementById('currentPatientSection').style.display = 'block';
       document.getElementById('loadingSection').style.display = 'block';
-      
       addLog(`Sesi dimulai: ${name} (${data.id})`);
       startPolling();
     } else {
@@ -365,15 +307,8 @@ document.getElementById('patientForm').addEventListener('submit', async function
 
 async function finishSession() {
   if (!currentSession) return;
-  
   try {
-    const response = await fetch(`${CONFIG.api.url}/session/${currentSession}/finish`, {
-      method: 'POST',
-      headers: {
-        'Authorization': authToken
-      }
-    });
-    
+    const response = await fetch(`${CONFIG.api.url}/session/${currentSession}/finish`, {method: 'POST'});
     if (response.ok) {
       addLog(`Sesi selesai: ${currentSession}`);
       resetDashboard();
@@ -386,33 +321,20 @@ async function finishSession() {
 function resetDashboard() {
   stopPolling();
   currentSession = null;
-  
   document.getElementById('addPatientSection').style.display = 'block';
   document.getElementById('currentPatientSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'none';
   document.getElementById('resultSection').style.display = 'none';
-  
   document.getElementById('patientForm').reset();
 }
 
-/* ========================================================================
-   REALTIME POLLING
-   ======================================================================== */
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
-  
   pollingInterval = setInterval(async () => {
     if (!currentSession) return;
-    
     try {
-      const response = await fetch(`${CONFIG.api.url}/session/${currentSession}/latest`, {
-        headers: {
-          'Authorization': authToken
-        }
-      });
-      
+      const response = await fetch(`${CONFIG.api.url}/session/${currentSession}/latest`);
       const data = await response.json();
-      
       if (data.latest) {
         displayResult(data.latest);
       } else {
@@ -434,61 +356,33 @@ function stopPolling() {
 function displayResult(result) {
   document.getElementById('loadingSection').style.display = 'none';
   document.getElementById('resultSection').style.display = 'block';
-  
   document.getElementById('resultCategory').textContent = result.category || '-';
-  document.getElementById('resultConfidence').textContent = 
-    result.confidence ? (result.confidence * 100).toFixed(1) : '-';
-  
+  document.getElementById('resultConfidence').textContent = result.confidence ? (result.confidence * 100).toFixed(1) : '-';
   document.getElementById('patientStatus').textContent = 'Selesai';
   document.getElementById('patientStatus').className = 'status-badge status-completed';
-  
   addLog(`Hasil ML: ${result.category} (${(result.confidence * 100).toFixed(1)}%)`);
 }
 
-/* ========================================================================
-   HISTORY - FIXED ✅
-   ======================================================================== */
 async function loadHistory() {
   const tbody = document.getElementById('historyBody');
   tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Loading...</td></tr>';
-  
   try {
-    const response = await fetch(`${CONFIG.api.url}/history`, {
-      headers: {
-        'Authorization': authToken
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    
+    const response = await fetch(`${CONFIG.api.url}/history`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    
     if (data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Belum ada data</td></tr>';
       return;
     }
-    
     tbody.innerHTML = data.map(item => {
-      const date = item.createdAt ? new Date(item.createdAt * 1000).toLocaleString('id-ID') : 
-                   item.sessionStart ? new Date(item.sessionStart).toLocaleString('id-ID') : '-';
+      const date = item.createdAt ? new Date(item.createdAt * 1000).toLocaleString('id-ID') : item.sessionStart ? new Date(item.sessionStart).toLocaleString('id-ID') : '-';
       const name = item.name || 'Unknown';
       const phone = item.phone || '-';
       const category = item.lastResultCategory || '-';
       const confidence = item.lastResultTimestamp ? '✓' : '-';
       const status = item.status || '-';
-      
-      return `<tr>
-        <td>${date}</td>
-        <td>${name}</td>
-        <td>${phone}</td>
-        <td>${category}</td>
-        <td>${confidence}</td>
-        <td>${status}</td>
-      </tr>`;
+      return `<tr><td>${date}</td><td>${name}</td><td>${phone}</td><td>${category}</td><td>${confidence}</td><td>${status}</td></tr>`;
     }).join('');
-    
     addLog(`History loaded: ${data.length} records`);
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:red">Error: ${err.message}</td></tr>`;
@@ -496,19 +390,10 @@ async function loadHistory() {
   }
 }
 
-/* ========================================================================
-   ADMIN - AWS STATUS CHECK
-   ======================================================================== */
 async function refreshAWSStatus() {
   addLog('Checking AWS services...');
-  
-  // Check API Gateway
   checkAPI();
-  
-  // Check CDN
   checkCDN();
-  
-  // IoT, Lambda, DynamoDB - simulated (butuh SDK atau endpoint khusus)
   updateStatus('iot', null, 'Requires AWS SDK');
   updateStatus('lambda', null, 'Requires AWS SDK');
   updateStatus('dynamo', null, 'Check via API calls');
@@ -516,12 +401,7 @@ async function refreshAWSStatus() {
 
 async function checkAPI() {
   try {
-    const response = await fetch(`${CONFIG.api.url}/history`, {
-      headers: {
-        'Authorization': authToken
-      }
-    });
-    
+    const response = await fetch(`${CONFIG.api.url}/history`);
     if (response.ok) {
       updateStatus('api', true, `HTTP ${response.status}`);
     } else {
@@ -534,7 +414,7 @@ async function checkAPI() {
 
 async function checkCDN() {
   try {
-    const response = await fetch(window.location.href, { method: 'HEAD' });
+    const response = await fetch(window.location.href, {method: 'HEAD'});
     if (response.ok) {
       updateStatus('cdn', true, 'Github Pages');
     } else {
@@ -548,7 +428,6 @@ async function checkCDN() {
 function updateStatus(service, isOk, detail) {
   const statusEl = document.getElementById(`${service}Status`);
   const detailEl = document.getElementById(`${service}Detail`);
-  
   if (isOk === true) {
     statusEl.textContent = '🟢 Online';
     statusEl.style.color = 'green';
@@ -559,17 +438,10 @@ function updateStatus(service, isOk, detail) {
     statusEl.textContent = '🟡 Unknown';
     statusEl.style.color = 'orange';
   }
-  
-  if (detailEl) {
-    detailEl.textContent = detail || '-';
-  }
-  
+  if (detailEl) detailEl.textContent = detail || '-';
   addLog(`${service.toUpperCase()}: ${isOk === true ? 'Ok' : isOk === false ? 'Failed' : 'Unknown'} (${detail})`);
 }
 
-/* ========================================================================
-   LOGGING
-   ======================================================================== */
 function addLog(message) {
   const logContainer = document.getElementById('logContainer');
   const timestamp = new Date().toLocaleTimeString('id-ID');
@@ -581,13 +453,8 @@ function addLog(message) {
   console.log(`[${timestamp}] ${message}`);
 }
 
-/* ========================================================================
-   INITIALIZATION - FIXED ✅
-   ======================================================================== */
 window.addEventListener('load', function() {
   addLog('SUNSTONE System Ready');
-  
-  // Check if already logged in
   const cognitoUser = userPool.getCurrentUser();
   if (cognitoUser) {
     cognitoUser.getSession(function(err, session) {
