@@ -597,7 +597,12 @@
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             
             document.getElementById(pageId).classList.add('active');
-            event.target.classList.add('active');
+            
+            // Update nav button active state
+            const buttons = document.querySelectorAll('.nav-btn');
+            if (pageId === 'dashboard') buttons[0].classList.add('active');
+            else if (pageId === 'history') buttons[1].classList.add('active');
+            else if (pageId === 'admin') buttons[2].classList.add('active');
 
             if (pageId === 'history') loadHistory();
             if (pageId === 'admin') addLog('[SYSTEM] Admin panel accessed');
