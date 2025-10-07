@@ -209,12 +209,12 @@
 <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
 <script>
 /* ========================================================================
-   KONFIGURASI AWS
+   KONFIGURASI AWS - FIXED ✅
    ======================================================================== */
 const CONFIG = {
   cognito: {
-    userPoolId: 'ap-southeast-1_JdYVBWDk0',
-    clientId: '72tqj8vvf3bmc6r6f2k4h9hoc6',
+    userPoolId: 'ap-southeast-1_fxhxbfLEe',
+    clientId: 'o6a9bv1qs65eq2pr2lligu0v4',
     region: 'ap-southeast-1'
   },
   api: {
@@ -230,7 +230,7 @@ let pollingInterval = null;
 let authToken = null;
 
 /* ========================================================================
-   COGNITO LOGIN
+   COGNITO LOGIN - FIXED ✅
    ======================================================================== */
 const poolData = {
   UserPoolId: CONFIG.cognito.userPoolId,
@@ -446,7 +446,7 @@ function displayResult(result) {
 }
 
 /* ========================================================================
-   HISTORY
+   HISTORY - FIXED ✅
    ======================================================================== */
 async function loadHistory() {
   const tbody = document.getElementById('historyBody');
@@ -582,7 +582,7 @@ function addLog(message) {
 }
 
 /* ========================================================================
-   INITIALIZATION
+   INITIALIZATION - FIXED ✅
    ======================================================================== */
 window.addEventListener('load', function() {
   addLog('SUNSTONE System Ready');
@@ -596,6 +596,7 @@ window.addEventListener('load', function() {
         document.getElementById('loginPage').classList.remove('active');
         document.getElementById('dashboardPage').classList.add('active');
         addLog('Auto-login berhasil');
+        loadHistory();
       }
     });
   }
