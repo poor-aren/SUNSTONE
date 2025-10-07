@@ -53,7 +53,7 @@
     <div id="loginPage" class="page active" style="text-align:center;padding:50px">
       <h1 style="color:#3b4998;margin-bottom:30px;">SUNSTONE Admin Login</h1>
       <form id="loginForm" style="max-width:300px;margin:auto;">
-        <input type="text" id="username" placeholder="Username" required style="padding:10px;width:100%;margin-bottom:15px;border:2px solid #ccc;border-radius:6px;">
+        <input type="text" id="username" placeholder="Email" required style="padding:10px;width:100%;margin-bottom:15px;border:2px solid #ccc;border-radius:6px;">
         <input type="password" id="password" placeholder="Password" required style="padding:10px;width:100%;margin-bottom:15px;border:2px solid #ccc;border-radius:6px;">
         <button class="btn btn-primary" style="width:100%;">Login</button>
       </form>
@@ -142,54 +142,60 @@
 /* === CONFIG ======================================= */
 const API = {
   url: "https://8308ialq3d.execute-api.ap-southeast-1.amazonaws.com/tros-20251007091134-4239",
-  key: "dummy",   // sesuai env di Lambda
-  deviceId: "ESP01"
+  key: "dummy"
 };
 /* ================================================== */
 
-let sessionToken = null;
+let authToken = null;
 
-// LOGIN
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
+document.getElementById("loginForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
-  const email = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
   try {
-    const res = await fetch(API.url + "/login", {
+    const res = await fetch(`${API.url}/login`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-api-key": API.key
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({
+        email: document.getElementById("username").value,
+        password: document.getElementById("password").value
+      })
     });
     const data = await res.json();
-
-    if (res.ok && data.ok) {
-      sessionToken = data.token;
-      localStorage.setItem("authToken", sessionToken);
-      showPage("dashboardPage");
-      alert("Login berhasil!");
+    if(res.ok && data.ok){
+      authToken = data.token;
+      document.getElementById("loginPage").classList.remove("active");
+      document.getElementById("dashboardPage").classList.add("active");
+      alert("Login sukses!");
     } else {
       alert("Login gagal: " + (data.error || "unknown"));
     }
-  } catch (err) {
+  } catch(err){
     alert("Error: " + err.message);
   }
 });
 
-// Fungsi helper
-function showPage(id) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+function showDashboard(ev){
+  setActive("dashboardPage", ev.target);
 }
-function showDashboard(){showPage("dashboardPage")}
-function showHistory(){showPage("historySection")}
-function showAdmin(){showPage("adminPage")}
-
-// default: login dulu
-showPage("loginPage");
+function showHistory(ev){
+  setActive("historySection", ev.target);
+}
+function showAdmin(ev){
+  setActive("adminPage", ev.target);
+}
+function setActive(id, btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  if(id==="historySection"){
+    document.getElementById("dashboardPage").classList.add("active");
+    document.getElementById("historySection").style.display="block";
+  } else {
+    document.getElementById(id).classList.add("active");
+  }
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
 </script>
 </body>
 </html>
