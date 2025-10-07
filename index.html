@@ -139,63 +139,390 @@
   </div>
 
 <script>
-/* === CONFIG ======================================= */
+/* === CONFIG (pakai endpoint kamu) ======================================= */
 const API = {
-  url: "https://8308ialq3d.execute-api.ap-southeast-1.amazonaws.com/tros-20251007091134-4239",
-  key: "dummy"
+  url: "https://8308ialq3d.execute-api.ap-southeast-1.amazonaws.com/tros-20251007091134-4239"
 };
-/* ================================================== */
+/* ====================================================================== */
 
 let authToken = null;
+let currentPatient = null;
+let polling = null;
+let staleTimer = null;
+let lastSensorSK = null;
+let lastDataAt = 0;
+let sessionStartLocalMs = 0;
+let testHistory = [];
+const HIDDEN_IDS_KEY = 'sunstone.hiddenHistoryIds';
+const SESSION_KEY = 'sunstone.session';
+const STALE_AFTER_MS = 10000;
 
-document.getElementById("loginForm").addEventListener("submit", async (e)=>{
+// ---------- Helpers ----------
+function headersCommon() {
+  const h = {};               // ❗ no content-type, no x-api-key => no preflight
+  if (authToken) h['authorization'] = `Bearer ${authToken}`;
+  return h;
+}
+async function callAPI(path, method='GET', body=null){
+  const opts = { method, mode: 'cors', cache: 'no-store', headers: headersCommon() };
+  if (body != null) opts.body = JSON.stringify(body); // Lambda masih bisa parse JSON walau tanpa content-type
+  const res = await fetch(API.url + path, opts);
+  if(!res.ok){
+    let msg;
+    try { msg = (await res.json()).error || res.statusText; } catch { msg = res.statusText; }
+    throw new Error(`${res.status} ${msg}`);
+  }
+  return res.json();
+}
+function saveSession(obj){ try{ localStorage.setItem(SESSION_KEY, JSON.stringify(obj)); }catch{} }
+function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch{} }
+function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showDashboard(e){showPage('dashboardPage');toggleSections('add');if(e)updateNav(e);}
+function showAdmin(e){showPage('adminPage');if(e)updateNav(e);refreshAWSStatus();}
+function showHistory(e){showPage('dashboardPage');toggleSections('history');if(e)updateNav(e);loadHistoryFromAPI();}
+function updateNav(e){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(e)e.target.classList.add('active');}
+function toggleSections(target){
+  addPatientSection.style.display= target==='add'?'block':'none';
+  currentPatientSection.style.display='none';
+  loadingSection.style.display='none';
+  resultSection.style.display='none';
+  historySection.style.display= target==='history'?'block':'none';
+}
+
+// ---------- Login (REAL to Lambda /login) ----------
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
-  try {
+  try{
     const res = await fetch(`${API.url}/login`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": API.key
-      },
+      method: 'POST',
+      mode: 'cors',
+      cache: 'no-store',
+      headers: headersCommon(), // no content-type, no api-key
       body: JSON.stringify({
-        email: document.getElementById("username").value,
-        password: document.getElementById("password").value
+        email: username.value.trim(),
+        password: password.value
       })
     });
     const data = await res.json();
-    if(res.ok && data.ok){
-      authToken = data.token;
-      document.getElementById("loginPage").classList.remove("active");
-      document.getElementById("dashboardPage").classList.add("active");
-      alert("Login sukses!");
-    } else {
-      alert("Login gagal: " + (data.error || "unknown"));
-    }
-  } catch(err){
-    alert("Error: " + err.message);
+    if (!res.ok || !data.ok) throw new Error(data.error || 'login-failed');
+    authToken = data.token || null;
+
+    showPage('dashboardPage');
+    resumeSessionIfAny(); // kalau ada sesi tersimpan
+    alert('Login sukses');
+  }catch(err){
+    alert('Login error: ' + err.message);
   }
 });
 
-function showDashboard(ev){
-  setActive("dashboardPage", ev.target);
+// ---------- Resume session ----------
+function resumeSessionIfAny(){
+  let s = null; try{ s = JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch{}
+  if(!s || !s.id) return;
+  currentPatient = { name:s.name, age:s.age, phone:s.phone, sessionId:s.id };
+  sessionStartLocalMs = Date.now();
+  addPatientSection.style.display='none';
+  currentPatientSection.style.display='block';
+  loadingSection.style.display='block';
+  resultSection.style.display='block';
+  currentName.textContent=s.name; currentAge.textContent=s.age; currentPhone.textContent=s.phone;
+  patientStatus.textContent='Aktif'; patientStatus.className='status-badge status-processing';
+  startPollingSensors();
 }
-function showHistory(ev){
-  setActive("historySection", ev.target);
-}
-function showAdmin(ev){
-  setActive("adminPage", ev.target);
-}
-function setActive(id, btn){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  if(id==="historySection"){
-    document.getElementById("dashboardPage").classList.add("active");
-    document.getElementById("historySection").style.display="block";
-  } else {
-    document.getElementById(id).classList.add("active");
+
+// ---------- Mulai sesi ----------
+document.getElementById('patientForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  try{
+    const p = {
+      name: patientName.value.trim(),
+      age: patientAge.value,
+      phone: patientPhone.value.trim(),
+      brink: brinkmanIndex.value.trim()
+    };
+    const resp = await callAPI('/session','POST',{ name:p.name, phone:p.phone, device_id:'ESP01' });
+    const sessionId = resp.id || `${p.name}_${p.phone}`;
+    currentPatient = { ...p, sessionId };
+
+    saveSession({ id: sessionId, name: p.name, age: p.age, phone: p.phone });
+
+    sessionStartLocalMs = Date.now();
+    lastDataAt = 0; lastSensorSK = null;
+
+    addPatientSection.style.display='none';
+    currentPatientSection.style.display='block';
+    loadingSection.style.display='block';
+    resultSection.style.display='block';
+    currentName.textContent=p.name; currentAge.textContent=p.age; currentPhone.textContent=p.phone;
+    patientStatus.textContent='Aktif'; patientStatus.className='status-badge status-processing';
+
+    startPollingSensors();
+  }catch(err){
+    if (String(err.message||'').includes('409')) {
+      alert('Tidak bisa mulai sesi baru: sudah ada sesi OPEN. Tutup dulu sesi itu di menu Riwayat.');
+    } else {
+      alert('Gagal mulai sesi: ' + err.message);
+    }
   }
-  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");
+});
+
+// ---------- Polling realtime ----------
+function startPollingSensors(){
+  clearInterval(polling); clearInterval(staleTimer); lastSensorSK = null;
+
+  polling = setInterval(async ()=>{
+    try{
+      if(!currentPatient?.sessionId) return;
+      const { items=[] } = await callAPI(`/session/${currentPatient.sessionId}/sensors?limit=1`,'GET');
+      if(items.length){
+        const it = items[0];
+        const tsMs = it.timestamp ? Date.parse(it.timestamp) : NaN;
+        if (!Number.isNaN(tsMs) && sessionStartLocalMs && tsMs < (sessionStartLocalMs - 1000)) return;
+
+        realtimeStatus.textContent = `Data masuk (${it.timestamp})`;
+        renderSensorValues(it.sensor_values);
+        lastDataAt = Date.now();
+
+        if(it.SK !== lastSensorSK){
+          lastSensorSK = it.SK;
+          const {category, confidence} = simpleInference(it.sensor_values);
+          updateResultUI(category, confidence, it.sensor_values);
+          await callAPI(`/session/${currentPatient.sessionId}/result`, 'POST', {
+            category, confidence, sensor_values: it.sensor_values, device_id: 'ESP01'
+          });
+        }
+        loadingSection.style.display='none';
+        resultSection.style.display='block';
+      }else{
+        if (!lastDataAt) {
+          loadingSection.style.display='block';
+          resultSection.style.display='none';
+          realtimeStatus.textContent = 'Menunggu data sensor...';
+        }
+      }
+    }catch(err){
+      console.warn(err);
+      if (!lastDataAt) {
+        loadingSection.style.display='block';
+        resultSection.style.display='none';
+        realtimeStatus.textContent = 'Gagal ambil data sensor.';
+      }
+    }
+  }, 1200);
+
+  staleTimer = setInterval(()=>{
+    if(!currentPatient?.sessionId) return;
+    if(!lastDataAt) return;
+    const age = Date.now() - lastDataAt;
+    if (age > STALE_AFTER_MS) {
+      resultDetails.innerHTML = '';
+      resultCategory.textContent = '-';
+      resultConfidence.textContent = '-';
+      resultSection.style.display='none';
+      loadingSection.style.display='block';
+      realtimeStatus.textContent = 'Menunggu data sensor...';
+    }
+  }, 1000);
 }
+
+function renderSensorValues(values){
+  const labels = ['S1','S2','S3','S4'];
+  const html = (values||[]).map((v,i)=>`<div class='detail-item'><b>${v}</b><br><small>${labels[i]||('S'+(i+1))}</small></div>`).join('');
+  resultDetails.innerHTML = html;
+}
+
+function simpleInference(values){
+  const avg = (values||[]).reduce((a,b)=>a+Number(b||0),0)/Math.max((values||[]).length,1);
+  let category='Rendah';
+  if(avg>=80) category='Tinggi';
+  else if(avg>=40) category='Sedang';
+  const confidence = Math.min(0.95, 0.6 + (avg/200)).toFixed(2);
+  return { category, confidence: Number(confidence) };
+}
+
+function updateResultUI(category, confidence, values){
+  resultCategory.textContent = category;
+  resultConfidence.textContent = confidence.toString();
+  loadingSection.style.display='none';
+  resultSection.style.display='block';
+  renderSensorValues(values);
+}
+
+// ---------- Selesai sesi ----------
+async function finishSession(){
+  if(!currentPatient?.sessionId) return;
+  try{
+    clearInterval(polling);
+    clearInterval(staleTimer);
+    await callAPI(`/session/${currentPatient.sessionId}/finish`,'POST');
+    patientStatus.textContent='Sesi Selesai';
+    patientStatus.className='status-badge status-completed';
+    clearSession();
+    alert('Sesi ditutup.');
+    toggleSections('add');
+    await loadHistoryFromAPI();
+    currentPatient = null;
+    lastDataAt = 0;
+  }catch(err){
+    alert('Gagal menutup sesi: ' + err.message);
+  }
+}
+
+// ---------- Riwayat ----------
+function getHiddenIds(){ try{ return JSON.parse(localStorage.getItem(HIDDEN_IDS_KEY)||'[]'); }catch{ return []; } }
+function setHiddenIds(arr){ try{ localStorage.setItem(HIDDEN_IDS_KEY, JSON.stringify(arr)); }catch{} }
+
+async function loadHistoryFromAPI(){
+  const body = document.getElementById('historyBody');
+  body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#777">Memuat...</td></tr>';
+  try{
+    const { patients=[] } = await callAPI('/history','GET');
+    const hidden = new Set(getHiddenIds());
+    testHistory = patients
+      .filter(p => !hidden.has(p.id))
+      .map(p => ({
+        date: p.lastResultTimestamp || p.sessionStart || '-',
+        name: (p.id||'-').split('_')[0],
+        fullId: p.id,
+        status: p.status,
+        category: p.lastResultCategory || '-',
+        confidence: '—'
+      }))
+      .sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+    renderHistoryTable(testHistory);
+  }catch(err){
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#b00">Gagal memuat riwayat: ${err.message}</td></tr>`;
+  }
+}
+
+function renderHistoryTable(rows){
+  const body = document.getElementById('historyBody');
+  if(!rows.length){
+    body.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#777">Belum ada riwayat</td></tr>';
+    return;
+  }
+  body.innerHTML = '';
+  rows.forEach((r)=>{
+    const tr = document.createElement('tr');
+    const actionBtn = r.status === 'OPEN'
+      ? `<button class='btn btn-danger btn-sm' onclick='closeFromHistory("${r.fullId}")'>Tutup</button>`
+      : `<button class='btn btn-success btn-sm' onclick='viewFromHistory("${r.fullId}")'>Buka</button>
+         <button class='btn btn-danger btn-sm' onclick='hideHistory("${r.fullId}")'>Hapus</button>`;
+    tr.innerHTML = `
+      <td>${r.date||'-'}</td>
+      <td>${r.name||'-'}</td>
+      <td>${r.category||'-'}</td>
+      <td>${r.confidence||'-'}</td>
+      <td>${actionBtn}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+async function closeFromHistory(id){
+  try{
+    await callAPI(`/session/${id}/finish`,'POST');
+    await loadHistoryFromAPI();
+    alert('Sesi ditutup.');
+  }catch(e){
+    alert('Gagal menutup: ' + e.message);
+  }
+}
+function hideHistory(id){
+  const hidden = getHiddenIds();
+  if(!hidden.includes(id)) hidden.push(id);
+  setHiddenIds(hidden);
+  loadHistoryFromAPI();
+}
+function viewFromHistory(id){
+  showDashboard();
+  toggleSections('add');
+  alert(`Meninjau riwayat: ${id}\n(untuk pemeriksaan baru silakan "Mulai Sesi" lagi)`);
+}
+
+// ---------- ADMIN status ----------
+function setStatus(id, state, text) {
+  const el = document.getElementById(id);
+  const dot = state === 'ok' ? '🟢'
+            : state === 'warn' ? '🟡'
+            : state === 'err' ? '🔴' : '⚪';
+  el.textContent = `${dot} ${text}`;
+}
+function adminLog(msg) {
+  const box = document.getElementById('logContainer');
+  const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  const div = document.createElement('div'); div.className = 'log-entry'; div.textContent = line; box.prepend(div);
+  while (box.children.length > 120) box.removeChild(box.lastChild);
+}
+async function checkAPI() {
+  const t0 = performance.now();
+  const res = await fetch(`${API.url}/history`, { mode:'cors', cache:'no-store', headers: headersCommon() });
+  if (!res.ok) throw new Error(`API /history ${res.status}`);
+  const js = await res.json();
+  const ms = Math.round(performance.now() - t0);
+  setStatus('apiStatus', 'ok', `Online (${ms}ms)`);
+  setStatus('lambdaStatus', 'ok', 'Online (via API)');
+  setStatus('dynamoStatus', Array.isArray(js.patients) ? 'ok' : 'warn',
+            Array.isArray(js.patients) ? 'Online' : 'Online (no data)');
+  adminLog(`API /history OK (${ms}ms), patients=${Array.isArray(js.patients) ? js.patients.length : 0}`);
+  return js;
+}
+async function checkIoT(historyJson) {
+  let sid = null;
+  try { sid = JSON.parse(localStorage.getItem(SESSION_KEY)||'null')?.id || null; } catch {}
+  if (!sid && historyJson && Array.isArray(historyJson.patients)) {
+    sid = (historyJson.patients.find(p => p.status === 'OPEN')||{}).id || null;
+  }
+  if (!sid) {
+    setStatus('iotStatus', 'warn', 'Perlu sesi aktif');
+    adminLog('IoT: tidak ada sesi aktif untuk dites');
+    return;
+  }
+  const r = await fetch(`${API.url}/session/${encodeURIComponent(sid)}/sensors?limit=1`, {
+    mode:'cors', cache:'no-store', headers: headersCommon()
+  });
+  if (!r.ok) throw new Error(`API /sensors ${r.status}`);
+  const { items=[] } = await r.json();
+  if (!items.length) {
+    setStatus('iotStatus','warn','Tidak ada data');
+    adminLog(`IoT: /sensors OK namun belum ada data untuk ${sid}`);
+    return;
+  }
+  const ts = items[0].timestamp;
+  const age = Math.max(0, (Date.now() - new Date(ts).getTime())/1000);
+  setStatus('iotStatus', age < 120 ? 'ok' : 'warn', `Online (last ${Math.round(age)}s)`);
+  adminLog(`IoT: data terakhir ${ts} (~${Math.round(age)}s lalu)`);
+}
+async function checkCDN() {
+  try {
+    await fetch(location.href, { method: 'GET', cache: 'no-store' });
+    setStatus('cdnStatus', 'ok', 'Online');
+    adminLog('CDN: OK (GitHub Pages)');
+  } catch {
+    setStatus('cdnStatus', 'err', 'Offline');
+    adminLog('CDN: gagal di-fetch');
+  }
+}
+async function refreshAWSStatus() {
+  setStatus('apiStatus', 'warn', 'Checking…');
+  setStatus('lambdaStatus', 'warn', 'Checking…');
+  setStatus('dynamoStatus', 'warn', 'Checking…');
+  setStatus('iotStatus', 'warn', 'Checking…');
+  setStatus('cdnStatus', 'warn', 'Checking…');
+  try {
+    const hist = await checkAPI();
+    await checkIoT(hist);
+  } catch (e) {
+    setStatus('apiStatus', 'err', 'Offline');
+    setStatus('lambdaStatus', 'err', 'Offline');
+    setStatus('dynamoStatus', 'err', 'Unknown');
+    setStatus('iotStatus', 'warn', 'Skip (API down)');
+    adminLog('API check gagal: ' + e.message);
+  }
+  await checkCDN();
+}
+
+// ---------- Init ----------
+document.addEventListener('DOMContentLoaded',()=>{ showPage('loginPage'); });
 </script>
 </body>
 </html>
