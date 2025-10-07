@@ -23,7 +23,6 @@
             margin: 0 auto;
         }
 
-        /* Header */
         .header {
             background: white;
             padding: 20px 30px;
@@ -33,6 +32,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .logo-section {
@@ -90,7 +91,6 @@
             transform: translateY(-2px);
         }
 
-        /* Pages */
         .page {
             display: none;
         }
@@ -99,7 +99,6 @@
             display: block;
         }
 
-        /* Dashboard Page */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -135,6 +134,7 @@
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
+            font-size: 14px;
         }
 
         .btn-primary {
@@ -152,9 +152,20 @@
             color: white;
         }
 
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .form-group {
@@ -169,16 +180,19 @@
             font-size: 14px;
         }
 
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             font-size: 14px;
             transition: border-color 0.3s;
+            background: white;
         }
 
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #764ba2;
         }
@@ -230,7 +244,6 @@
             50% { opacity: 0.5; }
         }
 
-        /* Session Page */
         .session-header {
             background: white;
             padding: 20px;
@@ -317,7 +330,6 @@
             opacity: 0.9;
         }
 
-        /* History Table */
         .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -371,7 +383,6 @@
             color: #1e40af;
         }
 
-        /* Admin Monitoring */
         .log-container {
             background: #1f2937;
             color: #10b981;
@@ -423,6 +434,25 @@
             margin-bottom: 20px;
         }
 
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+
         @media (max-width: 768px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
@@ -431,12 +461,22 @@
             .sensor-grid {
                 grid-template-columns: 1fr;
             }
+
+            .nav-tabs {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .nav-btn {
+                flex: 1;
+                padding: 10px 15px;
+                font-size: 13px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <div class="logo-section">
                 <div class="logo">S</div>
@@ -459,6 +499,7 @@
                     <div class="card-header">
                         <h2 class="card-title">Buat Sesi Baru</h2>
                     </div>
+                    <div id="sessionAlert"></div>
                     <form id="sessionForm" onsubmit="createSession(event)">
                         <div class="form-group">
                             <label>Nama Pasien</label>
@@ -466,15 +507,15 @@
                         </div>
                         <div class="form-group">
                             <label>No. HP</label>
-                            <input type="tel" id="patientPhone" placeholder="08xxxxxxxxxx" required>
+                            <input type="tel" id="patientPhone" placeholder="08xxxxxxxxxx" pattern="[0-9]{10,13}" required>
                         </div>
                         <div class="form-group">
                             <label>Device ID</label>
-                            <select id="deviceId" class="form-group input" style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:8px;">
-                                <option value="ESP01">ESP01</option>
+                            <select id="deviceId" required>
+                                <option value="ESP01">ESP01 - IoT Sensor Device</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%; margin-top:10px;">
+                        <button type="submit" class="btn btn-primary" id="startSessionBtn" style="width:100%; margin-top:10px;">
                             Mulai Sesi
                         </button>
                     </form>
@@ -505,19 +546,18 @@
         <!-- Session Monitoring Page -->
         <div id="session" class="page">
             <div class="session-header">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <h2 class="card-title">Monitoring Sesi</h2>
-                    <div>
-                        <button class="btn btn-danger" onclick="finishSession()">Tutup Sesi</button>
-                    </div>
+                    <button class="btn btn-danger" onclick="finishSession()">Tutup Sesi</button>
                 </div>
-                <div class="patient-info" id="patientInfo">
-                    <!-- Patient info will be populated here -->
-                </div>
+                <div class="patient-info" id="patientInfo"></div>
             </div>
 
             <div class="sensor-grid" id="sensorGrid">
-                <!-- Sensor cards will be populated here -->
+                <div class="sensor-card">
+                    <div class="sensor-name">Menunggu data sensor...</div>
+                    <div class="sensor-value">-</div>
+                </div>
             </div>
 
             <div id="resultPanel" style="display:none;">
@@ -577,7 +617,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
     <script>
-        // Configuration
         const CONFIG = {
             apiEndpoint: 'https://dd23gtb2nc.execute-api.ap-southeast-1.amazonaws.com',
             modelUrl: 'https://d1mw90se9yxe88.cloudfront.net/sunstone_model.onnx',
@@ -585,20 +624,18 @@
             pollInterval: 2000
         };
 
-        // Global State
         let currentSession = null;
         let pollingInterval = null;
         let onnxSession = null;
         let sensorHistory = [];
+        let lastInferenceTime = 0;
 
-        // Navigation
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             
             document.getElementById(pageId).classList.add('active');
             
-            // Update nav button active state
             const buttons = document.querySelectorAll('.nav-btn');
             if (pageId === 'dashboard') buttons[0].classList.add('active');
             else if (pageId === 'history') buttons[1].classList.add('active');
@@ -608,45 +645,77 @@
             if (pageId === 'admin') addLog('[SYSTEM] Admin panel accessed');
         }
 
-        // Create Session
         async function createSession(e) {
             e.preventDefault();
             
-            const name = document.getElementById('patientName').value;
-            const phone = document.getElementById('patientPhone').value;
+            const name = document.getElementById('patientName').value.trim();
+            const phone = document.getElementById('patientPhone').value.trim();
             const deviceId = document.getElementById('deviceId').value;
+
+            const btn = document.getElementById('startSessionBtn');
+            btn.disabled = true;
+            btn.textContent = 'Membuat Sesi...';
 
             addLog(`[API] Creating session for ${name}...`);
 
             try {
                 const response = await fetch(`${CONFIG.apiEndpoint}/session`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ name, phone, device_id: deviceId })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
 
                 const data = await response.json();
                 
                 if (data.id) {
-                    currentSession = { ...data, name, phone, deviceId };
+                    currentSession = { 
+                        id: data.id,
+                        name: name,
+                        phone: phone,
+                        deviceId: deviceId,
+                        status: data.status || 'OPEN'
+                    };
+                    
                     addLog(`[SUCCESS] Session created: ${data.id}`, 'success');
                     
-                    // Show session page
-                    showPage('session');
-                    displayPatientInfo();
-                    startPolling();
-                    loadModel();
+                    document.getElementById('sessionAlert').innerHTML = `
+                        <div class="alert alert-success">
+                            ✓ Sesi berhasil dibuat! Session ID: ${data.id}
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        showPage('session');
+                        displayPatientInfo();
+                        startPolling();
+                        loadModel();
+                        document.getElementById('sessionForm').reset();
+                        document.getElementById('sessionAlert').innerHTML = '';
+                    }, 1500);
+                    
                 } else {
-                    addLog(`[ERROR] Failed to create session: ${JSON.stringify(data)}`, 'error');
-                    alert('Gagal membuat sesi. Cek log admin.');
+                    throw new Error('No session ID returned');
                 }
             } catch (error) {
-                addLog(`[ERROR] Network error: ${error.message}`, 'error');
-                alert('Error koneksi ke server');
+                addLog(`[ERROR] Failed to create session: ${error.message}`, 'error');
+                document.getElementById('sessionAlert').innerHTML = `
+                    <div class="alert alert-error">
+                        ✗ Gagal membuat sesi: ${error.message}
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Mulai Sesi';
             }
         }
 
-        // Display Patient Info
         function displayPatientInfo() {
             const html = `
                 <div class="info-item">
@@ -669,24 +738,22 @@
             document.getElementById('patientInfo').innerHTML = html;
         }
 
-        // Load ONNX Model
         async function loadModel() {
             try {
                 addLog('[ML] Loading ONNX model...');
                 onnxSession = await ort.InferenceSession.create(CONFIG.modelUrl);
-                addLog('[ML] Model loaded successfully', 'success');
+                addLog('[ML] Model loaded successfully from CDN', 'success');
             } catch (error) {
-                addLog(`[ML] Failed from CDN, trying backup...`, 'warning');
+                addLog(`[ML] CDN failed, trying backup S3...`, 'warning');
                 try {
                     onnxSession = await ort.InferenceSession.create(CONFIG.modelUrlBackup);
-                    addLog('[ML] Model loaded from backup', 'success');
+                    addLog('[ML] Model loaded from S3 backup', 'success');
                 } catch (err) {
                     addLog(`[ERROR] Model load failed: ${err.message}`, 'error');
                 }
             }
         }
 
-        // Start Polling
         function startPolling() {
             if (pollingInterval) clearInterval(pollingInterval);
             
@@ -694,10 +761,13 @@
                 if (!currentSession) return;
 
                 try {
-                    // Get latest sensor data
                     const response = await fetch(
-                        `${CONFIG.apiEndpoint}/session/${currentSession.id}/sensors?limit=1`
+                        `${CONFIG.apiEndpoint}/session/${currentSession.id}/sensors?limit=1`,
+                        { headers: { 'Accept': 'application/json' } }
                     );
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
                     const data = await response.json();
 
                     if (data.sensors && data.sensors.length > 0) {
@@ -705,8 +775,7 @@
                         updateSensorDisplay(latest.sensors);
                         sensorHistory.push(latest);
 
-                        // Run inference if model loaded
-                        if (onnxSession && sensorHistory.length >= 3) {
+                        if (onnxSession && Date.now() - lastInferenceTime > 5000) {
                             runInference(latest.sensors);
                         }
                     }
@@ -715,10 +784,9 @@
                 }
             }, CONFIG.pollInterval);
 
-            addLog('[SYSTEM] Polling started');
+            addLog('[SYSTEM] Polling started - waiting for sensor data...');
         }
 
-        // Update Sensor Display
         function updateSensorDisplay(sensors) {
             const sensorNames = {
                 raw_mg811: 'CO2 (MG811)',
@@ -732,7 +800,7 @@
                 html += `
                     <div class="sensor-card">
                         <div class="sensor-name">${sensorNames[key] || key}</div>
-                        <div class="sensor-value">${value}</div>
+                        <div class="sensor-value">${Math.round(value)}</div>
                         <div class="mini-chart"></div>
                     </div>
                 `;
@@ -740,17 +808,16 @@
             document.getElementById('sensorGrid').innerHTML = html;
         }
 
-        // Run ML Inference
         async function runInference(sensors) {
             try {
+                lastInferenceTime = Date.now();
                 addLog('[ML] Running inference...');
 
-                // Prepare input tensor [raw_mg811, raw_mq7, raw_mq3, raw_mq135]
                 const inputData = new Float32Array([
-                    sensors.raw_mg811,
-                    sensors.raw_mq7,
-                    sensors.raw_mq3,
-                    sensors.raw_mq135
+                    sensors.raw_mg811 || 0,
+                    sensors.raw_mq7 || 0,
+                    sensors.raw_mq3 || 0,
+                    sensors.raw_mq135 || 0
                 ]);
 
                 const tensor = new ort.Tensor('float32', inputData, [1, 4]);
@@ -759,7 +826,6 @@
                 const results = await onnxSession.run(feeds);
                 const output = results.output.data;
 
-                // Get prediction
                 const maxIndex = output.indexOf(Math.max(...output));
                 const categories = ['Rendah', 'Sedang', 'Tinggi'];
                 const category = categories[maxIndex];
@@ -767,176 +833,67 @@
 
                 addLog(`[ML] Prediction: ${category} (${confidence}%)`, 'success');
 
-                // Display result
                 document.getElementById('resultCategory').textContent = category;
                 document.getElementById('resultConfidence').textContent = `Confidence: ${confidence}%`;
                 document.getElementById('resultPanel').style.display = 'block';
 
-                // Send result to backend
                 await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/result`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         category,
                         confidence: parseFloat(confidence),
-                        sensor_values: [sensors.raw_mg811, sensors.raw_mq7, sensors.raw_mq3, sensors.raw_mq135],
+                        sensor_values: [
+                            sensors.raw_mg811 || 0, 
+                            sensors.raw_mq7 || 0, 
+                            sensors.raw_mq3 || 0, 
+                            sensors.raw_mq135 || 0
+                        ],
                         timestamp: new Date().toISOString(),
-                        device_id: currentSession.deviceId
+                        device_id: currentSession.deviceId,
+                        modelVersion: 'onnx-v1'
                     })
                 });
 
-                addLog('[API] Result sent to backend', 'success');
+                addLog('[API] Result saved to backend', 'success');
 
             } catch (error) {
                 addLog(`[ERROR] Inference failed: ${error.message}`, 'error');
             }
         }
 
-        // Finish Session
         async function finishSession() {
             if (!currentSession) return;
             
-            if (!confirm('Tutup sesi ini?')) return;
+            if (!confirm('Tutup sesi ini? Sesi tidak dapat dibuka kembali setelah ditutup.')) return;
 
             try {
                 addLog('[API] Closing session...');
                 
-                await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/finish`, {
-                    method: 'POST'
+                const response = await fetch(`${CONFIG.apiEndpoint}/session/${currentSession.id}/finish`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' }
                 });
 
-                addLog('[SUCCESS] Session closed', 'success');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                addLog('[SUCCESS] Session closed successfully', 'success');
                 
                 clearInterval(pollingInterval);
                 currentSession = null;
                 sensorHistory = [];
+                lastInferenceTime = 0;
                 
+                alert('Sesi berhasil ditutup!');
                 showPage('dashboard');
-                document.getElementById('sessionForm').reset();
                 
             } catch (error) {
                 addLog(`[ERROR] Failed to close session: ${error.message}`, 'error');
+                alert('Gagal menutup sesi. Coba lagi.');
             }
         }
 
-        // Load History
         async function loadHistory() {
             try {
-                const response = await fetch(`${CONFIG.apiEndpoint}/history`);
-                const data = await response.json();
-
-                const tbody = document.getElementById('historyTable');
-                
-                if (data.history && data.history.length > 0) {
-                    tbody.innerHTML = data.history.map(h => `
-                        <tr>
-                            <td>${new Date(h.sessionStart || Date.now()).toLocaleString('id-ID')}</td>
-                            <td>${h.name}</td>
-                            <td>${h.phone}</td>
-                            <td>
-                                <span class="badge ${h.status === 'OPEN' ? 'badge-info' : 'badge-success'}">
-                                    ${h.status}
-                                </span>
-                            </td>
-                            <td>
-                                ${h.lastResultCategory ? 
-                                    `<span class="badge badge-${getBadgeClass(h.lastResultCategory)}">
-                                        ${h.lastResultCategory}
-                                    </span>` : '-'}
-                            </td>
-                            <td>
-                                ${h.status === 'OPEN' ? 
-                                    `<button class="btn btn-danger btn-sm" onclick="closeSessionFromHistory('${h.id}')">Tutup</button>` :
-                                    `<button class="btn btn-success btn-sm" onclick="viewDetails('${h.id}')">Detail</button>`
-                                }
-                            </td>
-                        </tr>
-                    `).join('');
-                } else {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:#666;">Belum ada data</td></tr>';
-                }
-
-                addLog(`[API] Loaded ${data.history?.length || 0} history records`);
-            } catch (error) {
-                addLog(`[ERROR] Failed to load history: ${error.message}`, 'error');
-            }
-        }
-
-        function getBadgeClass(category) {
-            if (category === 'Tinggi') return 'danger';
-            if (category === 'Sedang') return 'warning';
-            return 'success';
-        }
-
-        async function closeSessionFromHistory(sessionId) {
-            if (!confirm('Tutup sesi ini?')) return;
-
-            try {
-                await fetch(`${CONFIG.apiEndpoint}/session/${sessionId}/finish`, {
-                    method: 'POST'
-                });
-                addLog(`[API] Session ${sessionId} closed from history`, 'success');
-                loadHistory();
-            } catch (error) {
-                addLog(`[ERROR] Failed to close: ${error.message}`, 'error');
-            }
-        }
-
-        function viewDetails(sessionId) {
-            alert(`Detail untuk session: ${sessionId}\n\nFitur ini akan menampilkan grafik lengkap dan laporan PDF.`);
-        }
-
-        function filterHistory() {
-            const search = document.getElementById('searchBox').value.toLowerCase();
-            const rows = document.querySelectorAll('#historyTable tr');
-            
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(search) ? '' : 'none';
-            });
-        }
-
-        // Admin Logs
-        function addLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const logClass = type === 'error' ? 'error' : type === 'warning' ? 'warning' : '';
-            
-            const log = document.createElement('div');
-            log.className = `log-entry ${logClass}`;
-            log.textContent = `[${timestamp}] ${message}`;
-            
-            const container = document.getElementById('logContainer');
-            container.appendChild(log);
-            container.scrollTop = container.scrollHeight;
-
-            // Update system status
-            if (type === 'error') {
-                document.getElementById('systemStatus').textContent = 'Error';
-                document.getElementById('systemStatus').style.background = '#ef4444';
-            } else if (type === 'success') {
-                document.getElementById('systemStatus').textContent = 'Active';
-            }
-        }
-
-        function clearLogs() {
-            document.getElementById('logContainer').innerHTML = '<div class="log-entry">[SYSTEM] Logs cleared</div>';
-        }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            addLog('[SYSTEM] SUNSTONE Dashboard initialized');
-            addLog(`[CONFIG] API Endpoint: ${CONFIG.apiEndpoint}`);
-            addLog(`[CONFIG] Model URL: ${CONFIG.modelUrl}`);
-            addLog('[SYSTEM] Ready to start session');
-        });
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', (e) => {
-            if (currentSession) {
-                e.preventDefault();
-                e.returnValue = 'Sesi masih aktif. Yakin ingin keluar?';
-            }
-        });
-    </script>
-</body>
-</html>
+                const response = await fetch(`${CONFIG.apiEndpoint}/history`, {
+                    headers: { 'Accept': 'application/json' }
