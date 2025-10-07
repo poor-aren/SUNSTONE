@@ -109,7 +109,7 @@
         <h2 style="color:#3b4998">Riwayat Pemeriksaan</h2>
         <table>
           <thead><tr><th>Tanggal</th><th>Nama</th><th>Hasil</th><th>Confidence</th><th>Aksi</th></tr></thead>
-        <tbody id="historyBody"></tbody>
+          <tbody id="historyBody"></tbody>
         </table>
       </div>
     </div>
@@ -141,6 +141,7 @@
 <script>
 /* === CONFIG (ISI DENGAN PUNYAMU) ======================================= */
 const API = {
+  // ganti kalau perlu; diisi default dari data AWS kamu
   url: "https://8308ialq3d.execute-api.ap-southeast-1.amazonaws.com/tros-20251007091134-4239",
   key: "75179e4b24c0179f1806d2a18707e7cb",
   deviceId: "ESP01"
@@ -149,14 +150,18 @@ const API = {
 
 let currentPatient = null;
 let polling = null;
+let staleTimer = null;
 let lastSensorSK = null;
+let lastDataAt = 0;          // kapan terakhir kali ada data baru (ms)
+let sessionStartLocalMs = 0; // waktu mulai sesi (versi browser)
 let testHistory = [];
 const HIDDEN_IDS_KEY = 'sunstone.hiddenHistoryIds';
 const SESSION_KEY = 'sunstone.session';
+const STALE_AFTER_MS = 10000; // 10 detik: kalau tidak ada data → kosongkan UI
 
 // ---- Page navigation (desain tetap) ----
 function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');}
-function showDashboard(e){showPage('dashboardPage');toggleSections('add');if(e)updateNav(e);enforceSingleOpenUI();}
+function showDashboard(e){showPage('dashboardPage');toggleSections('add');if(e)updateNav(e);}
 function showAdmin(e){showPage('adminPage');if(e)updateNav(e);refreshAWSStatus();}
 function showHistory(e){showPage('dashboardPage');toggleSections('history');if(e)updateNav(e);loadHistoryFromAPI();}
 function updateNav(e){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');}
@@ -173,102 +178,62 @@ document.getElementById('loginForm').addEventListener('submit',e=>{
   e.preventDefault();showPage('dashboardPage');resumeSessionIfAny();
 });
 
-// ---- Helper API ----
+// ---- Helper panggil API ----
 async function callAPI(path, method='GET', body=null){
   const opts = { method, headers:{'content-type':'application/json','x-api-key':API.key} };
   if(body) opts.body = JSON.stringify(body);
   const res = await fetch(API.url + path, opts);
   if(!res.ok){
+    // Tangani 409 (sesi sudah ada) agar user paham
+    if (res.status === 409) {
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err?.error ? `${res.status} ${err.error}` : `409 conflict`);
+    }
     const t = await res.text().catch(()=>res.statusText);
     throw new Error(`API ${method} ${path} -> ${res.status} ${t}`);
   }
   return res.json();
 }
 
-// ---- Cari sesi OPEN (global 1 saja) ----
-async function getOpenSessionId(){
-  const js = await callAPI('/history','GET');
-  const open = (js.patients||[]).find(p => p.status === 'OPEN');
-  return open ? open.id : null;
-}
-
 // ---- Simpan/restore sesi agar tahan refresh ----
 function saveSession(obj){ try{ localStorage.setItem(SESSION_KEY, JSON.stringify(obj)); }catch{} }
 function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch{} }
-
-async function resumeSessionIfAny(){
-  // 1) Cek sesi OPEN di server
-  let openId = null;
-  try { openId = await getOpenSessionId(); } catch {}
-  // 2) Cek localStorage
+function resumeSessionIfAny(){
   let s = null; try{ s = JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch{}
-  const resumeId = openId || (s && s.id);
-
-  if(!resumeId){
-    // tidak ada sesi aktif → tampilkan form
-    toggleSections('add');
-    return;
-  }
-  // ada sesi aktif → tampilkan UI sesi, tanpa buka sesi baru
-  attachUIToSession(resumeId, s?.name, s?.age, s?.phone);
-}
-
-// ---- Terapkan UI ke sesi aktif tertentu ----
-function attachUIToSession(sessionId, name, age, phone){
-  currentPatient = { sessionId, name: name||'-', age: age||'-', phone: phone||'-' };
+  if(!s || !s.id) return;
+  // tampilkan UI kembali
+  currentPatient = { name:s.name, age:s.age, phone:s.phone, sessionId:s.id };
+  sessionStartLocalMs = Date.now(); // mulai “jam” lokal untuk filter & staleness
   addPatientSection.style.display='none';
   currentPatientSection.style.display='block';
   loadingSection.style.display='block';
   resultSection.style.display='block';
-  currentName.textContent=currentPatient.name;
-  currentAge.textContent=currentPatient.age;
-  currentPhone.textContent=currentPatient.phone;
+  currentName.textContent=s.name; currentAge.textContent=s.age; currentPhone.textContent=s.phone;
   patientStatus.textContent='Aktif'; patientStatus.className='status-badge status-processing';
-  saveSession({ id: sessionId, name: currentPatient.name, age: currentPatient.age, phone: currentPatient.phone });
   startPollingSensors();
 }
 
-// ---- Mulai sesi (blokir bila sudah ada OPEN) ----
+// ---- Mulai sesi ----
 document.getElementById('patientForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   try{
-    // Cegah buka sesi baru jika sudah ada yang OPEN
-    const openId = await getOpenSessionId();
-    if (openId) {
-      alert(`Sudah ada sesi aktif: ${openId}. Selesaikan dulu sebelum membuka sesi baru.`);
-      attachUIToSession(openId); // switch UI ke sesi yang sedang aktif
-      return;
-    }
-
     const p = {
       name: patientName.value.trim(),
       age: patientAge.value,
       phone: patientPhone.value.trim(),
       brink: brinkmanIndex.value.trim()
     };
-
-    // Panggil API open session; handle 409 kalau race
-    const res = await fetch(API.url + '/session', {
-      method:'POST',
-      headers:{'content-type':'application/json','x-api-key':API.key},
-      body: JSON.stringify({ name:p.name, phone:p.phone, device_id: API.deviceId })
-    });
-
-    if (res.status === 409) {
-      const j = await res.json().catch(()=>({}));
-      const sid = j?.current_open;
-      alert(`Sesi sudah ada: ${sid}. Kamu tidak bisa membuka sesi baru sebelum menutupnya.`);
-      attachUIToSession(sid);
-      return;
-    }
-    if (!res.ok) {
-      const t = await res.text().catch(()=>res.statusText);
-      throw new Error(`API /session ${res.status} ${t}`);
-    }
-    const resp = await res.json();
+    const resp = await callAPI('/session','POST',{ name:p.name, phone:p.phone, device_id: API.deviceId });
     const sessionId = resp.id || `${p.name}_${p.phone}`;
     currentPatient = { ...p, sessionId };
+
+    // simpan ke localStorage (biar tahan refresh)
     saveSession({ id: sessionId, name: p.name, age: p.age, phone: p.phone });
+
+    // reset “timer” sesi lokal
+    sessionStartLocalMs = Date.now();
+    lastDataAt = 0;
+    lastSensorSK = null;
 
     // tampilkan section aktif
     addPatientSection.style.display='none';
@@ -278,23 +243,46 @@ document.getElementById('patientForm').addEventListener('submit', async (e)=>{
     currentName.textContent=p.name; currentAge.textContent=p.age; currentPhone.textContent=p.phone;
     patientStatus.textContent='Aktif'; patientStatus.className='status-badge status-processing';
 
-    // mulai polling sensor
+    // mulai polling + monitor staleness
     startPollingSensors();
   }catch(err){
-    alert('Gagal mulai sesi: ' + err.message);
+    if (String(err.message||'').includes('409')) {
+      alert('Tidak bisa mulai sesi baru: sudah ada satu sesi OPEN. Tutup dulu sesi itu di menu Riwayat.');
+    } else {
+      alert('Gagal mulai sesi: ' + err.message);
+    }
   }
 });
 
+// ---- Polling realtime + staleness guard (10 detik)
 function startPollingSensors(){
-  clearInterval(polling); lastSensorSK = null;
+  clearInterval(polling);
+  clearInterval(staleTimer);
+  lastSensorSK = null;
+
+  // Polling data
   polling = setInterval(async ()=>{
     try{
       if(!currentPatient?.sessionId) return;
       const { items=[] } = await callAPI(`/session/${currentPatient.sessionId}/sensors?limit=1`,'GET');
       if(items.length){
         const it = items[0];
+
+        // Filter: abaikan data yang timestamp-nya lebih lama dari waktu mulai sesi lokal
+        const tsMs = it.timestamp ? Date.parse(it.timestamp) : NaN;
+        if (!Number.isNaN(tsMs) && sessionStartLocalMs && tsMs < (sessionStartLocalMs - 1000)) {
+          // Data lama (sebelum sesi dibuka di browser) → skip
+          return;
+        }
+
+        // Tampilkan karena valid
         realtimeStatus.textContent = `Data masuk (${it.timestamp})`;
         renderSensorValues(it.sensor_values);
+
+        // Update “terakhir data”
+        lastDataAt = Date.now();
+
+        // Inference & kirim hasil hanya untuk data baru
         if(it.SK !== lastSensorSK){
           lastSensorSK = it.SK;
           const {category, confidence} = simpleInference(it.sensor_values);
@@ -303,14 +291,45 @@ function startPollingSensors(){
             category, confidence, sensor_values: it.sensor_values, device_id: API.deviceId
           });
         }
+
+        // Pastikan UI “aktif”
+        loadingSection.style.display='none';
+        resultSection.style.display='block';
       }else{
-        realtimeStatus.textContent = 'Menunggu data sensor...';
+        // Tidak ada item sama sekali
+        if (!lastDataAt) {
+          // Belum pernah terima data pada sesi ini
+          loadingSection.style.display='block';
+          resultSection.style.display='none';
+          realtimeStatus.textContent = 'Menunggu data sensor...';
+        }
       }
     }catch(err){
       console.warn(err);
-      realtimeStatus.textContent = 'Gagal ambil data sensor.';
+      // Jangan matikan UI; hanya tampilkan status
+      if (!lastDataAt) {
+        loadingSection.style.display='block';
+        resultSection.style.display='none';
+        realtimeStatus.textContent = 'Gagal ambil data sensor.';
+      }
     }
   }, 1200);
+
+  // Monitor staleness → kosongkan UI jika >10 detik tanpa data baru
+  staleTimer = setInterval(()=>{
+    if(!currentPatient?.sessionId) return;
+    if(!lastDataAt) return; // belum pernah dapat data
+    const age = Date.now() - lastDataAt;
+    if (age > STALE_AFTER_MS) {
+      // Kosongkan tampilan realtime (tanpa menghapus riwayat di DB)
+      resultDetails.innerHTML = '';
+      resultCategory.textContent = '-';
+      resultConfidence.textContent = '-';
+      resultSection.style.display='none';
+      loadingSection.style.display='block';
+      realtimeStatus.textContent = 'Menunggu data sensor...';
+    }
+  }, 1000);
 }
 
 function renderSensorValues(values){
@@ -341,15 +360,16 @@ async function finishSession(){
   if(!currentPatient?.sessionId) return;
   try{
     clearInterval(polling);
+    clearInterval(staleTimer);
     await callAPI(`/session/${currentPatient.sessionId}/finish`,'POST');
     patientStatus.textContent='Sesi Selesai';
     patientStatus.className='status-badge status-completed';
     clearSession();
     alert('Sesi ditutup.');
     toggleSections('add');
-    // setelah tutup, tidak ada sesi OPEN → form bisa dipakai lagi
     await loadHistoryFromAPI();
     currentPatient = null;
+    lastDataAt = 0;
   }catch(err){
     alert('Gagal menutup sesi: ' + err.message);
   }
@@ -414,13 +434,6 @@ async function closeFromHistory(id){
     await callAPI(`/session/${id}/finish`,'POST');
     await loadHistoryFromAPI();
     alert('Sesi ditutup.');
-    // kalau kita sedang melampirkan UI ke sesi yang ditutup → lepaskan
-    const s = JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
-    if (s?.id === id) {
-      clearSession();
-      currentPatient = null;
-      toggleSections('add');
-    }
   }catch(e){
     alert('Gagal menutup: ' + e.message);
   }
@@ -528,25 +541,7 @@ async function refreshAWSStatus() {
   }
   await checkCDN();
 }
-
-// ---- Enforce single-session UI saat masuk Dashboard ----
-async function enforceSingleOpenUI(){
-  try{
-    const openId = await getOpenSessionId();
-    if (openId) {
-      attachUIToSession(openId);
-    } else {
-      // tidak ada sesi → kembali ke form
-      toggleSections('add');
-      clearInterval(polling);
-      currentPatient = null;
-      clearSession();
-    }
-  }catch(e){
-    // kalau gagal cek, biarkan form tampil tapi log error
-    console.warn('enforceSingleOpenUI error:', e.message);
-  }
-}
+// ===========================================================
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded',()=>{
