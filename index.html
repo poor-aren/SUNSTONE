@@ -139,18 +139,57 @@
   </div>
 
 <script>
-/* === CONFIG (FIX: pakai dummy) ======================================= */
+/* === CONFIG ======================================= */
 const API = {
   url: "https://8308ialq3d.execute-api.ap-southeast-1.amazonaws.com/tros-20251007091134-4239",
-  key: "dummy",   // ✅ pakai dummy biar cocok dengan backend sekarang
+  key: "dummy",   // sesuai env di Lambda
   deviceId: "ESP01"
 };
-/* ====================================================================== */
+/* ================================================== */
 
-// (seluruh script di bawah sama persis seperti kode kamu, nggak diubah sama sekali)
+let sessionToken = null;
 
-...  // (isi script persis sama kayak punyamu di atas, tidak dihapus/ubah)
+// LOGIN
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
 
+  try {
+    const res = await fetch(API.url + "/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": API.key
+      },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (res.ok && data.ok) {
+      sessionToken = data.token;
+      localStorage.setItem("authToken", sessionToken);
+      showPage("dashboardPage");
+      alert("Login berhasil!");
+    } else {
+      alert("Login gagal: " + (data.error || "unknown"));
+    }
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+});
+
+// Fungsi helper
+function showPage(id) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+function showDashboard(){showPage("dashboardPage")}
+function showHistory(){showPage("historySection")}
+function showAdmin(){showPage("adminPage")}
+
+// default: login dulu
+showPage("loginPage");
 </script>
 </body>
 </html>
